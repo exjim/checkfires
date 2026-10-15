@@ -1,0 +1,60 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function signedIn() { return request.auth != null; }
+    function userDoc() { return get(/databases/$(database)/documents/users/$(request.auth.uid)).data; }
+    // 사용 중인 계정의 역할('admin' | 'inspector' | 'owner'), 아니면 빈 문자열
+    function role() {
+      return signedIn()
+        && exists(/databases/$(database)/documents/users/$(request.auth.uid))
+        && userDoc().active == true ? userDoc().role : '';
+    }
+    function isAdmin() { return role() == 'admin'; }
+
+    // 최초 설정 여부(로그인 화면에서 확인)
+    match /meta/{doc} {
+      allow read: if true;
+      allow create: if signedIn() && doc == 'init'
+        && !exists(/databases/$(database)/documents/meta/init);
+    }
+
+    // 계정 프로필: 본인 또는 관리자만 조회, 관리자만 생성·수정(최초 관리자 1명은 예외)
+    match /users/{uid} {
+      allow get: if signedIn() && (request.auth.uid == uid || isAdmin());
+      allow list: if isAdmin();
+      allow create: if isAdmin()
+        || (signedIn() && request.auth.uid == uid
+            && request.resource.data.role == 'admin'
+            && !exists(/databases/$(database)/documents/meta/init));
+      allow update, delete: if isAdmin();
+    }
+
+    match /buildings/{id} {
+      allow read: if role() != '';
+      allow write: if isAdmin();
+    }
+
+    match /jobs/{id} {
+      allow read: if isAdmin()
+        || (role() == 'inspector' && resource.data.inspUid == request.auth.uid);
+      allow create, delete: if isAdmin();
+      allow update: if isAdmin()
+        || (role() == 'inspector' && resource.data.inspUid == request.auth.uid);
+    }
+
+    match /reports/{id} {
+      allow read: if isAdmin()
+        || (role() == 'inspector' && resource.data.inspUid == request.auth.uid)
+        || (role() == 'owner' && resource.data.ownerUid == request.auth.uid
+            && resource.data.status == '승인');
+      allow create: if role() == 'inspector'
+        && request.resource.data.inspUid == request.auth.uid;
+      allow update: if isAdmin()
+        || (role() == 'owner' && resource.data.ownerUid == request.auth.uid
+            && resource.data.status == '승인'
+            && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['fixes']));
+      allow delete: if isAdmin();
+    }
+  }
+}

@@ -1,35 +1,52 @@
 # checkfires — 소방점검 통합 웹앱
 
-법정 비치 기준 고지 → 3D 층별 점검(유무·수량·동작·사진) → 리포트 제출, 관리자(모니터링·작업 분배·3D 배정·리포트 승인)·건물주(결과 열람·조치 확인)를 담은 단일 페이지 앱입니다. 설치 가능한 PWA(오프라인 캐시 포함)입니다.
+점검자·관리자·건물주가 **아이디/비밀번호로 로그인**해 각자의 영역만 쓰는 소방점검 웹앱입니다. 설치 가능한 PWA입니다.
 
-> **시연 버전입니다.** 입력·사진은 새로고침하면 사라지고(서버 없음), 사용자·관리자·건물주 전달은 한 화면 안에서 역할만 바꿔 보여줍니다. 법정 수치 일부는 원문 대조 전이라 앱 안에 "원문 대조 필요"로 표시되어 있습니다. 실제 점검에 쓰기 전에 전문가·관할 소방서 확인이 필요합니다.
+| 영역 | 할 수 있는 일 |
+| --- | --- |
+| **점검자** | 배정된 작업 확인 → 법정 비치 기준 고지 → 3D 층별 점검(유무·수량·동작·사진, 현장 반경 안에서만 입력) → 서명하고 제출 |
+| **관리자** | 모니터링, 건물 등록(층별 면적·용도·좌표), 계정 생성, 작업 생성·배정, 제출 리포트 확인·승인·보완 요청, 3D 열람, 기준·규칙 확인 |
+| **건물주** | 관리자가 승인한 내 건물의 리포트 열람, 결함 조치 완료 표시 |
+
+로그인 화면에서 구분(점검자/관리자/건물주)을 고르며, 계정의 실제 구분과 다르면 들어갈 수 없습니다. 계정은 관리자만 만들 수 있습니다.
+
+> 법정 수치 일부는 소방청 원문 대조 전이라 앱 안에 "원문 대조 필요"로 표시되어 있습니다. 실제 점검 결과를 공식 서류로 쓰기 전에 전문가·관할 소방서 확인이 필요합니다.
+
+## 두 가지 동작 방식
+- **서버 모드** — Firebase(Auth + Firestore)에 저장합니다. 여러 사람이 각자 기기에서 함께 씁니다. `*.web.app` 배포 주소에서 자동으로 이 모드가 됩니다.
+- **로컬 모드** — Firebase 연결이 없으면(로컬 실행 등) 이 기기·이 브라우저 안에만 저장합니다. 혼자 시험해 볼 때만 쓰세요.
+
+## 서버 연결 설정 (Firebase 콘솔에서 한 번만)
+1. **웹 앱 등록**: 프로젝트 설정 → 일반 → "내 앱"에서 웹(`</>`) 앱 추가. (호스팅이 이 구성값을 자동으로 앱에 전달합니다. 코드에 키를 넣지 않습니다.)
+2. **로그인 방식**: 빌드 → Authentication → 시작하기 → 로그인 방법 → **이메일/비밀번호** 사용 설정. (앱은 아이디를 `아이디@checkfires.app` 형태로 변환해 쓰며 실제 메일은 보내지 않습니다.)
+3. **데이터베이스**: 빌드 → Firestore Database → 데이터베이스 만들기(위치 `asia-northeast3` 서울 권장) → **규칙** 탭에 이 저장소의 [`firestore.rules`](firestore.rules) 내용을 붙여넣고 게시.
+4. 배포된 주소를 열면 **"관리자 계정 만들기"** 화면이 나옵니다. 처음 한 번만 만들며, 이후 계정은 관리자 화면 → 사용자 탭에서 만듭니다.
+
+(Firebase CLI가 있다면 `firebase deploy --only firestore:rules`로도 규칙을 올릴 수 있습니다.)
 
 ## 파일
-- `index.html` — 앱 전체(의존성 없음, Google Fonts만 외부)
-- `manifest.webmanifest`, `sw.js`, `icons/` — 설치형 앱(PWA)용
-- `firebase.json` — Firebase Hosting 설정
-- `.nojekyll` — (GitHub Pages를 쓸 경우용)
+- `index.html` — 앱 전체(의존성 없음. Firebase SDK는 서버 모드일 때만 gstatic에서 불러옴)
+- `firestore.rules` — 서버 보안 규칙(역할별 읽기·쓰기 제한)
+- `manifest.webmanifest`, `sw.js`, `icons/` — 설치형 앱(PWA)
+- `firebase.json`, `.firebaserc`, `.github/workflows/` — Firebase Hosting 설정과 push 시 자동 배포
+
+## 배포
+`main`에 push하면 GitHub Actions가 Firebase Hosting에 자동 배포합니다(저장소는 비공개 유지). 수동 배포: `firebase deploy --only hosting`.
 
 ## 로컬 실행
 ```bash
-python3 -m http.server 8080   # http://localhost:8080
+python3 -m http.server 8080   # http://localhost:8080  (로컬 모드)
 ```
-(`file://`로 열어도 앱은 동작하지만 서비스 워커·설치는 http(s)에서만 됩니다.)
 
-## 배포 (Firebase Hosting) — 저장소는 비공개로 유지
-GitHub 무료 플랜은 비공개 저장소에서 Pages를 쓸 수 없어 Firebase Hosting으로 배포합니다. 주소: `https://<프로젝트ID>.web.app`
+## 데이터 구조 (Firestore)
+`users`(계정·역할) · `buildings`(층별 면적·용도·좌표·건물주) · `jobs`(작업·배정·진행률·건물 스냅샷) · `reports`(제출 리포트·결함·사진·서명·조치 표시) · `meta/init`(최초 설정 표시)
 
-```bash
-npm i -g firebase-tools
-firebase login
-# 처음 한 번: Firebase 콘솔에서 프로젝트를 만들거나 기존 프로젝트 ID를 확인
-firebase use --add <프로젝트ID>        # .firebaserc 생성(별칭 default)
-firebase deploy --only hosting
-```
-- `firebase.json`이 저장소 루트를 그대로 올립니다(README·설정 파일 제외). `sw.js`와 `index.html`은 캐시하지 않도록 헤더를 지정했습니다.
-- 수정 후 재배포: 같은 명령 `firebase deploy --only hosting`.
-- 커스텀 도메인: Firebase 콘솔 → Hosting → "도메인 추가". Play 스토어(TWA)용 전체 화면 앱에는 도메인 루트가 필요하므로 이 방식이 유리합니다. `.well-known/assetlinks.json`을 저장소에 추가하고(`firebase.json`은 이미 이 경로를 서빙하도록 두었습니다) 다시 배포하세요.
-- 자동 배포(GitHub Actions)가 필요하면 `firebase init hosting:github`로 워크플로와 서비스 계정 시크릿을 만들 수 있습니다.
+## 알아둘 점
+- 점검 입력은 점검자 기기에 자동 임시저장되고, 제출 시 서버로 올라갑니다. 제출은 온라인이어야 합니다(오프라인 대기열은 아직 없습니다).
+- 사진은 리포트 문서(1 MB 한도)에 함께 저장되므로 제출 시 자동으로 줄입니다. 사진이 아주 많은 건물은 Firebase Storage로 분리하는 것이 좋습니다.
+- 관리자가 다른 사람의 비밀번호를 대신 재설정하는 기능은 없습니다(본인이 로그인 후 변경). 분실 시 계정을 새로 만드세요.
+- 계정 삭제 대신 "사용 중지"를 씁니다(중지된 계정은 로그인할 수 없음).
+- 작업은 만들 때의 건물 정보를 복사해 가집니다. 건물 정보를 고치면 이후 만드는 작업부터 적용됩니다.
 
 ## 일반 앱처럼 쓰기
 1. **홈 화면에 추가(PWA):** 배포된 주소를 휴대폰 Chrome으로 열고 메뉴 → "앱 설치/홈 화면에 추가".
@@ -39,7 +56,6 @@ firebase deploy --only hosting
    bubblewrap init --manifest https://<도메인>/manifest.webmanifest
    bubblewrap build        # app-release-bundle.aab 생성
    ```
-   - 패키지명(예: `kr.co.faircode.checkfires`)과 서명 키를 정합니다. 키는 반드시 따로 백업하세요.
-   - 빌드 후 나오는 SHA-256 지문을 `https://<도메인>/.well-known/assetlinks.json`에 등록해야 주소창 없는 전체 화면으로 열립니다. 도메인 루트에 `.well-known`을 둘 수 있는 Firebase Hosting(기본 `.web.app` 또는 커스텀 도메인)을 쓰세요.
-   - Play Console에서 앱 만들기 → AAB 업로드 → 개인정보처리방침·데이터 보안 양식·콘텐츠 등급 작성 → 심사. 신규 개인 개발자 계정은 비공개 테스트 기간 요건이 있을 수 있으니 Play Console 안내를 확인하세요.
-3. **Firebase 연동(실사용 단계):** Auth + Firestore + Storage로 점검 결과·사진·리포트를 저장하고 역할별 권한을 나눕니다. Google Cloud Console에서 프로젝트를 만들고 Firebase를 연결한 뒤 웹 앱 구성값을 `index.html`에 넣습니다. 이 저장소에는 키를 커밋하지 마세요(공개 웹 키는 보안 규칙으로 보호).
+   - 패키지명(예: `kr.co.faircode.checkfires`)과 서명 키를 정하고 키는 따로 백업하세요.
+   - 빌드 후 나오는 SHA-256 지문을 `https://<도메인>/.well-known/assetlinks.json`에 등록해야 주소창 없는 전체 화면으로 열립니다.
+   - Play Console에서 앱 만들기 → AAB 업로드 → 개인정보처리방침·데이터 보안 양식·콘텐츠 등급 작성 → 심사. 위치·사진·계정 정보를 다루므로 개인정보처리방침이 필요합니다.
