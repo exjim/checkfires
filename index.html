@@ -1,0 +1,557 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#23262b">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="소방점검">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<style>body{margin:0}</style>
+<title>소방점검 통합 웹앱</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700;900&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: 상단 역할 전환 → [사용자] ①고지(법정 비치 기준) ②층별 점검 ③리포트 제출 / [관리자] 모니터링 · 리포트 · 기준 */
+:root{--bg:#f6f7f9;--surface:#fff;--ink:#23262b;--mute:#6a7078;--line:#dfe3e8;--blue:#286ef0;--blue-soft:#e8f0fe;--red:#d93a3a;--red-soft:#fdecec;--amber:#b7791f;--amber-soft:#fdf3dc;--green:#1a8a5a;--green-soft:#e2f5ec;--wire:#e9ecf0;--grey:#b9c0c9;--slab:rgba(255,255,255,.72);--slab-edge:#9aa4b0;--stage:#e4e8ee;
+--sans:'Noto Sans KR',system-ui,sans-serif;--mono:'IBM Plex Mono',ui-monospace,monospace}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#14171b;--surface:#1c2025;--ink:#e8eaee;--mute:#9aa1ab;--line:#2f353c;--blue:#6b9bff;--blue-soft:#1d2a47;--red:#ff7b7b;--red-soft:#3a2023;--amber:#e6b758;--amber-soft:#3a3120;--green:#4cc38a;--green-soft:#1b3328;--wire:#262b31;--grey:#4a525c;--slab:rgba(40,46,54,.78);--slab-edge:#5b6672;--stage:#101317;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#14171b;--surface:#1c2025;--ink:#e8eaee;--mute:#9aa1ab;--line:#2f353c;--blue:#6b9bff;--blue-soft:#1d2a47;--red:#ff7b7b;--red-soft:#3a2023;--amber:#e6b758;--amber-soft:#3a3120;--green:#4cc38a;--green-soft:#1b3328;--wire:#262b31;--grey:#4a525c;--slab:rgba(40,46,54,.78);--slab-edge:#5b6672;--stage:#101317;color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--sans);font-size:15px;line-height:1.6;padding-block:0 60px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.wrap{max-width:1120px;margin-inline:auto}
+header.top{padding-block:22px 10px;display:flex;flex-wrap:wrap;gap:10px 20px;align-items:center;justify-content:space-between}
+header.top h1{font-size:clamp(20px,3.4vw,28px);line-height:1.25;margin:0;font-weight:900;text-wrap:balance}
+.kick{font:500 11.5px var(--mono);letter-spacing:.08em;color:var(--mute);text-transform:uppercase}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:10px;overflow:hidden;background:var(--surface)}
+.seg button{border:0;background:transparent;color:var(--mute);font:500 14px var(--sans);padding:9px 16px;cursor:pointer;min-height:40px}
+.seg button[aria-pressed="true"]{background:var(--ink);color:var(--bg)}
+.steps{display:flex;gap:6px;overflow-x:auto;border-bottom:1px solid var(--line);padding-block:8px;position:sticky;top:env(safe-area-inset-top,0px);background:var(--bg);z-index:20;margin-inline:-16px;padding-inline:16px}
+.steps button{flex:none;border:0;background:transparent;color:var(--mute);font:500 14px var(--sans);padding:9px 14px;border-radius:8px;cursor:pointer;min-height:40px}
+.steps button[aria-current="step"]{background:var(--ink);color:var(--bg)}
+.steps button:disabled{opacity:.4;cursor:not-allowed}
+main{padding-top:18px;display:grid;gap:16px}
+h2{font-size:21px;margin:0 0 4px;font-weight:900;text-wrap:balance}
+h3{font-size:15.5px;margin:0 0 8px}
+.lead{color:var(--mute);margin:0 0 6px;max-width:76ch;font-size:14.5px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:16px;min-width:0}
+.grid{display:grid;gap:14px}.g2{grid-template-columns:repeat(auto-fit,minmax(300px,1fr))}.g4{grid-template-columns:repeat(auto-fit,minmax(150px,1fr))}
+.notice{border-left:3px solid var(--amber);background:var(--amber-soft);padding:12px 14px;border-radius:0 8px 8px 0;font-size:14px}
+.notice.blue{border-color:var(--blue);background:var(--blue-soft)}
+.notice.red{border-color:var(--red);background:var(--red-soft)}
+.tw{overflow-x:auto;border:1px solid var(--line);border-radius:10px;background:var(--surface)}
+table{border-collapse:collapse;width:100%;font-size:13.5px}
+th,td{text-align:left;padding:9px 11px;border-bottom:1px solid var(--line);vertical-align:top}
+th{font:500 11px var(--mono);letter-spacing:.05em;text-transform:uppercase;color:var(--mute);background:var(--bg);white-space:nowrap}
+tr:last-child td{border-bottom:0}
+td.c,th.c{text-align:center}
+input[type=number],select,textarea{font:inherit;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:7px 9px;min-height:38px;max-width:100%}
+input[type=number]{width:92px}
+textarea{width:100%;min-height:56px;resize:vertical}
+label.cb{display:flex;gap:8px;align-items:flex-start;font-size:14px}
+label.cb input{margin-top:5px;width:18px;height:18px;flex:none}
+.pill{display:inline-block;font:500 11px var(--mono);padding:2px 8px;border-radius:99px;white-space:nowrap}
+.p-ok{background:var(--green-soft);color:var(--green)}.p-warn{background:var(--amber-soft);color:var(--amber)}.p-bad{background:var(--red-soft);color:var(--red)}.p-no{background:var(--wire);color:var(--mute)}.p-blue{background:var(--blue-soft);color:var(--blue)}
+.btn{border:0;background:var(--ink);color:var(--bg);border-radius:9px;padding:10px 16px;font:700 14px var(--sans);cursor:pointer;min-height:42px}
+.btn.ghost{background:transparent;color:var(--ink);border:1px solid var(--line)}
+.btn.blue{background:var(--blue);color:#fff}
+.btn.sm{padding:6px 10px;min-height:34px;font-size:13px}
+.btn:disabled{opacity:.4;cursor:not-allowed}
+.row{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+.sp{flex:1}
+.mx td.n{text-align:center;font-weight:700;white-space:nowrap}
+.mx td.na{text-align:center;color:var(--mute);background:var(--bg);font-size:12px}
+.ins{display:grid;grid-template-columns:minmax(0,230px) minmax(0,1fr);gap:16px;align-items:start}
+@media(max-width:860px){.ins{grid-template-columns:minmax(0,1fr)}}
+.side{display:grid;gap:12px;position:sticky;top:64px}
+@media(max-width:860px){.side{position:static}}
+.iso{width:100%;max-width:230px;margin-inline:auto;display:block}
+.iso polygon{cursor:pointer;stroke-width:1.5}
+.fl-list{display:grid;gap:6px}
+.fl-list button{display:grid;grid-template-columns:34px 1fr auto;gap:8px;align-items:center;text-align:left;border:1px solid var(--line);background:var(--bg);color:var(--ink);border-radius:8px;padding:8px 10px;font:inherit;font-size:13px;cursor:pointer}
+.fl-list button[aria-pressed="true"]{border-color:var(--blue);background:var(--blue-soft)}
+.bar{height:5px;background:var(--wire);border-radius:3px;overflow:hidden;margin-top:3px}.bar i{display:block;height:100%;background:var(--green)}
+.item{border:1px solid var(--line);border-radius:12px;background:var(--surface);overflow:hidden}
+.item.na{opacity:.6}
+.item>header{display:flex;flex-wrap:wrap;gap:6px 10px;align-items:center;padding:12px 14px;border-bottom:1px solid var(--line);background:var(--bg)}
+.item>header b{font-size:15px}
+.item .body{padding:12px 14px;display:grid;gap:10px}
+.qrow{display:flex;flex-wrap:wrap;gap:8px 12px;align-items:center}
+.ck{border:1px solid var(--line);border-radius:9px;padding:8px 10px}
+.ck .q{font-size:13.5px;margin-bottom:6px;display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.opts{display:flex;gap:6px}
+.opts button{flex:1;border:1px solid var(--line);background:var(--bg);color:var(--mute);border-radius:7px;padding:6px 4px;font:500 13px var(--sans);cursor:pointer;min-height:36px}
+.opts button[aria-pressed="true"].o1,.opts button[aria-pressed="true"].y{background:var(--green-soft);border-color:var(--green);color:var(--green)}
+.opts button[aria-pressed="true"].o2{background:var(--amber-soft);border-color:var(--amber);color:var(--amber)}
+.opts button[aria-pressed="true"].o3,.opts button[aria-pressed="true"].n{background:var(--red-soft);border-color:var(--red);color:var(--red)}
+.opts button:disabled{opacity:.45;cursor:not-allowed}
+.photos{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.ph{position:relative;width:74px;height:74px;border-radius:8px;overflow:hidden;border:1px solid var(--line);background:var(--wire)}
+.ph img{width:100%;height:100%;object-fit:cover;display:block;cursor:zoom-in}
+.ph button{position:absolute;top:2px;right:2px;width:22px;height:22px;border:0;border-radius:50%;background:rgba(0,0,0,.6);color:#fff;cursor:pointer;font-size:13px;line-height:1}
+.addph{display:inline-flex;gap:6px;flex-wrap:wrap}
+.addph label{cursor:pointer}
+.small{font-size:12.5px;color:var(--mute)}
+.kpi{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:12px 14px}
+.kpi b{display:block;font-size:26px;line-height:1.15}.kpi span{font-size:12.5px;color:var(--mute)}
+.heat{display:inline-block;min-width:46px;text-align:center;font:700 12px var(--mono);padding:4px 6px;border-radius:6px}
+.h-ok{background:var(--green-soft);color:var(--green)}.h-warn{background:var(--amber-soft);color:var(--amber)}.h-bad{background:var(--red-soft);color:var(--red)}.h-no{background:var(--wire);color:var(--mute)}.h-prog{background:var(--blue-soft);color:var(--blue)}
+.list{display:grid;gap:8px}
+.lrow{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;align-items:center;border:1px solid var(--line);background:var(--surface);border-radius:10px;padding:10px 12px;text-align:left;font:inherit;color:inherit;cursor:pointer;width:100%}
+.lrow[aria-pressed="true"]{border-color:var(--blue);background:var(--blue-soft)}
+.dfx{display:grid;gap:8px}
+.df{border:1px solid var(--line);border-radius:10px;padding:10px 12px;background:var(--surface)}
+.lb{position:fixed;inset:0;background:rgba(0,0,0,.8);display:grid;place-items:center;z-index:100;padding:20px}
+.lb img{max-width:100%;max-height:86vh;border-radius:10px;background:#fff}
+.lb button{position:fixed;top:max(14px,env(safe-area-inset-top,0px));right:16px}
+.legend{display:flex;flex-wrap:wrap;gap:8px 14px;font-size:12.5px;color:var(--mute)}
+.legend i{display:inline-block;width:11px;height:11px;border-radius:3px;margin-right:5px;vertical-align:-1px}
+.tag{font:500 10.5px var(--mono);color:var(--mute);border:1px solid var(--line);border-radius:5px;padding:0 5px}
+
+.v3{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,1fr);gap:16px;align-items:start}
+@media(max-width:900px){.v3{grid-template-columns:minmax(0,1fr)}}
+.ctl{display:flex;flex-wrap:wrap;gap:8px 12px;align-items:center;margin-bottom:10px;font-size:13px}
+.ctl label{display:inline-flex;gap:6px;align-items:center;color:var(--mute)}
+.ctl input[type=range]{width:100px}
+.chip{border:1px solid var(--line);background:var(--bg);color:var(--mute);border-radius:99px;padding:5px 11px;font:500 12.5px var(--sans);cursor:pointer;min-height:32px}
+.chip[aria-checked="true"]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.stage{position:relative;height:440px;background:var(--stage);border:1px solid var(--line);border-radius:12px;overflow:hidden;perspective:1400px;touch-action:none;cursor:grab;user-select:none}
+@media(max-width:520px){.stage{height:340px}}
+.stage .hint{position:absolute;left:10px;bottom:8px;font:500 11px var(--mono);color:var(--mute);z-index:5;pointer-events:none}
+.scene{position:absolute;left:50%;top:52%;width:0;height:0;transform-style:preserve-3d;transform:scale(var(--sc,1)) rotateX(var(--rx,58deg)) rotateZ(var(--rz,-35deg))}
+.fl{position:absolute;left:-150px;top:-100px;width:300px;height:200px;transform-style:preserve-3d;background:var(--slab);border:2px solid var(--slab-edge);border-radius:6px;transition:transform .35s,background .2s,border-color .2s}
+.fl.sel{border-color:var(--blue);box-shadow:0 0 0 3px var(--blue-soft)}
+.fl.dim{background:transparent;border-color:var(--line);border-style:dashed}
+.fl .rm{position:absolute;border:1.5px solid var(--slab-edge)}
+.fl.dim .rm{border-color:var(--line)}
+.fl .stc{position:absolute;right:8px;top:8px;width:34px;height:56px;border:1.5px solid var(--slab-edge);background:repeating-linear-gradient(0deg,var(--slab-edge) 0 1px,transparent 1px 7px);opacity:.7}
+.fl .fn{position:absolute;left:-46px;top:6px;font:700 13px var(--mono);color:var(--ink);transform:rotateZ(35deg);transform-origin:left top;white-space:nowrap}
+.fl.dim .fn{color:var(--mute)}
+.mk{position:absolute;width:28px;height:28px;margin:0;padding:0;border-radius:50%;border:2.5px solid var(--slab-edge);background:var(--surface);color:var(--ink);font:700 11px var(--sans);display:grid;place-items:center;cursor:pointer;transform:translate3d(-50%,-50%,14px) rotateZ(calc(var(--rz,-35deg)*-1)) rotateX(calc(var(--rx,58deg)*-1));box-shadow:0 2px 0 rgba(0,0,0,.18)}
+.mk.s-ok{border-color:var(--green);background:var(--green-soft);color:var(--green)}
+.mk.s-warn{border-color:var(--amber);background:var(--amber-soft);color:var(--amber)}
+.mk.s-bad{border-color:var(--red);background:var(--red-soft);color:var(--red)}
+.mk.cur{outline:3px solid var(--blue);outline-offset:2px}
+.mk.off{opacity:.4}
+.item.focus{outline:3px solid var(--blue);outline-offset:2px}
+.board{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:10px}
+.col{background:var(--bg);border:1px dashed var(--grey);border-radius:10px;padding:10px;display:grid;gap:8px;align-content:start;min-height:140px}
+.tk{background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:8px 10px;display:grid;gap:4px}
+.tk.req{border-color:var(--amber)}
+.sm-cols{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px}
+.card.newc{border-color:var(--blue)}
+.ul{list-style:none;margin:0;padding:0;display:grid;gap:4px;font-size:13.5px}
+</style>
+</head>
+<body>
+
+
+<div class="wrap">
+<header class="top">
+  <div><div class="kick">Faircode · 소방안전 점검 앱인앱</div><h1>소방점검 통합 웹앱</h1></div>
+  <div class="seg" role="group" aria-label="역할"><button id="r-user" aria-pressed="true">점검원 (사용자)</button><button id="r-admin" aria-pressed="false">관리자</button><button id="r-owner" aria-pressed="false">건물주</button></div>
+</header>
+<nav class="steps" id="steps" aria-label="단계"></nav>
+<main id="view"></main>
+</div>
+<div id="lbx"></div>
+
+<script>
+(function(){
+const $=s=>document.querySelector(s);
+const esc=s=>String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const FL=['4F','3F','2F','1F','B1'];
+const isUnder=f=>f==='B1';
+const fnum=f=>isUnder(f)?-1:parseInt(f);
+
+/* ---------- 법정 기준 데이터 (관리자 '기준' 탭에 그대로 표시) ---------- */
+const USES={
+ '근린생활시설':{ext:100,auto:600,spr:{sub:1000}},
+ '업무시설':{ext:100,auto:1000,spr:{sub:1000}},
+ '판매시설':{ext:100,auto:1000,spr:{total:5000,sub:1000}},
+ '숙박시설':{ext:100,auto:'all',spr:{total:600,sub:1000}},
+ '노유자시설':{ext:100,auto:400,spr:{total:600,sub:1000}},
+ '의료시설':{ext:50,auto:600,spr:{total:600,sub:1000}},
+ '위락시설':{ext:30,auto:600,spr:{sub:1000}},
+ '공동주택(아파트)':{ext:100,auto:'all',spr:{sub:1000}},
+ '공연장·집회시설':{ext:50,auto:1000,spr:{sub:1000}},
+ '그 밖의 용도':{ext:200,auto:1000,spr:{sub:1000}}
+};
+const V1='별표 4 · 2차 자료로 확인',V2='원문 대조 필요';
+const CK={
+ ext:{n:'소화기',s:'E',basis:'NFTC 101 · 용도별 바닥면적당 능력단위(위락 30 / 의료·집회 50 / 근생·업무 등 100 / 그 밖 200㎡), 내화구조+불연·준불연·난연 마감 시 2배, 보행거리 소형 20 m, 바닥에서 1.5 m 이하. 설치대상: 시행령 별표 4 소화기구(연면적 33㎡ 이상)',v:'설치대상 33㎡ '+V1+' / 능력단위·보행거리: '+V2,
+  c:[['위치','보행거리 20 m 이내 · 바닥 1.5 m 이하 · 표지 부착',0],['압력게이지','지시압력이 정상(녹색) 범위',0],['안전핀·봉인','안전핀 체결, 봉인 이상 없음',0],['호스·노즐·외관','호스 균열·변형, 용기 부식 없음',0],['제조연월','분말소화기는 제조 후 10년 미경과(경과 시 교체 또는 성능확인)',0]]},
+ det:{n:'감지기',s:'D',basis:'자동화재탐지설비 설치대상(별표 4) · 감지기 설치면적 NFTC 203 (차동식 스포트형 2종 내화 70㎡ / 그 밖 40㎡ 가정)',v:'설치대상 '+V1+' / 면적당 개수: '+V2,
+  c:[['외형·탈착','변형·탈락·먼지 오염 없음',0],['작동시험','시험기로 작동 → 수신기에 해당 구역 화재표시',1],['설치 위치','천장·벽 이격, 환기구 인접 아님',0]]},
+ pb:{n:'발신기',s:'P',basis:'NFTC 203 · 층마다 설치, 수평거리 25 m 이하, 설치 높이 0.8~1.5 m (면적 1,000㎡당 1개로 보수 산정)',v:'수평거리 25 m 일부 확인 / 나머지 '+V2,
+  c:[['위치·높이','0.8~1.5 m, 식별 쉬운 곳',0],['누름 작동','누름 → 수신기에 신호',1],['응답·표시등','응답 확인등·위치표시등(적색) 점등',1]]},
+ bell:{n:'경종(음향장치)',s:'B',basis:'NFTC 203 · 층마다 설치, 수평거리 25 m 이하 (발신기와 같은 수량으로 산정). 음량 기준은 원문 확인',v:V2,
+  c:[['경종 작동','수신기 시험·감지기 작동 시 해당 층 경종 울림',1],['음량','1 m 거리에서 충분한 크기(기준 dB는 원문 확인)',1],['외관·고정','탈락·훼손 없음',0]]},
+ rcv:{n:'수신기',s:'R',basis:'NFTC 203 · 방재실·1층 출입구 인근, 건물 1대',v:V2,
+  c:[['전원','주전원·예비전원 정상 표시',1],['표시·경보','화재·고장 표시등 이상 없음, 스위치 정상 위치',1],['회로시험','회로 도통·동작시험 결과 이상 없음',1]]},
+ exit:{n:'피난구유도등',s:'출',basis:'유도등 설치대상 별표 4(축사·터널 제외 전체) · NFTC 303 · 계단·옥외 출입구 상부 (개수 = 층 계단 수 + 1층 외부출입구 1)',v:'설치대상 '+V1+' / 개수 산정: '+V2,
+  c:[['점등','상시 점등(녹색)',0],['예비전원','점검스위치로 예비전원 전환 시 점등 유지',1],['가림·장애물','시야 가림·적치물 없음',0]]},
+ path:{n:'통로유도등',s:'통',basis:'NFTC 303 · 복도 구부러진 모퉁이와 보행거리 20 m마다 (필요 수량은 현장 도면 기준 판정)',v:V2,
+  c:[['점등','상시 점등',0],['예비전원','예비전원 전환 시 점등 유지',1],['위치','모퉁이·20 m 간격 충족',0]]},
+ door:{n:'방화문(피난계단)',s:'문',basis:'소방시설법 제16조 · 피난시설·방화구획 및 방화시설의 관리 (피난계단 출입문 = 층 계단 수). 점검항목은 자체점검 종합점검표 피난·방화 항목 기준',v:'조문 번호·항목: '+V2,
+  c:[['설치·훼손','방화문 설치, 문틀·문짝 훼손 없음',0],['자동닫힘','도어클로저로 스스로 닫히고 걸림(래치) 정상',1],['상시 닫힘','고정(괴어둠)·개방 상태 아님',0],['적치물','문 앞·계단실 내 적치물 없음',0]]},
+ spr:{n:'스프링클러 헤드',s:'S',basis:'별표 4 스프링클러 대상 · NFTC 103 · 수평거리 2.3 m 이하(내화구조 가정)',v:'설치대상 '+V1+' / 수평거리: '+V2,
+  c:[['헤드 외관','변형·도장·이물 없음',0],['살수장애','헤드 주변 가림·적치물 없음',0],['말단 시험','말단 시험밸브 개방 → 경보·방수 정상',1]]},
+ hyd:{n:'옥내소화전',s:'H',basis:'별표 4 옥내소화전 (연면적 3,000㎡ 이상, 또는 지하·4층 이상 층 600㎡ 이상) · NFTC 102 · 수평거리 25 m 이하',v:V2,
+  c:[['함 개폐·표지','문 개폐 정상, 위치표시등 점등',1],['호스·노즐','호스 균열·노즐 상태 정상, 정리 보관',0],['기동표시','발신기·기동스위치 누름 시 펌프 기동표시',1]]},
+ desc:{n:'완강기(피난기구)',s:'완',basis:'NFTC 301 · 3층 이상 10층 이하 층마다 (최소 1개로 산정, 용도별 추가 기준은 원문 확인)',v:V2,
+  c:[['고정·지지대','고정 지지대·부착 상태 견고',0],['사용 표지','사용방법 표지 부착, 접근 가능',0],['외관','벨트·로프 손상·부식 없음',0]]}
+};
+const ORDER=['rcv','ext','det','pb','bell','exit','path','door','spr','hyd','desc'];
+
+/* ---------- 상태 ---------- */
+const S={role:'user',step:0,bld:null,gps:true,view:'iso',rx:58,rz:-35,gap:70,focus:null,layers:{},asg:{'4F':'이도윤','3F':'이도윤','2F':'박서연','1F':'이도윤','B1':null},ack:false,use:'근린생활시설',fire2:true,stairs:2,
+ areas:{'4F':300,'3F':300,'2F':300,'1F':420,'B1':1050},floor:'3F',submitted:null,tab:'mon',rep:null,toast:''};
+try{Object.assign(S.layers,JSON.parse(localStorage.getItem('fa-layers')||'{}'))}catch(_){}
+const INSP={}; // INSP[floor][key]={has,qty,r:[],photos:[],note}
+const REPORTS=[];
+const ph=(t,c)=>'data:image/svg+xml;utf8,'+encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="320" height="240"><rect width="320" height="240" fill="'+c+'"/><rect x="20" y="20" width="280" height="200" fill="none" stroke="#fff" stroke-opacity=".6" stroke-dasharray="6 6"/><text x="160" y="118" text-anchor="middle" font-size="20" font-family="sans-serif" fill="#fff">'+t+'</text><text x="160" y="146" text-anchor="middle" font-size="13" font-family="sans-serif" fill="#fff" fill-opacity=".85">샘플 사진 (시연)</text></svg>');
+function rec(f,k){INSP[f]=INSP[f]||{};return INSP[f][k]=INSP[f][k]||{has:null,qty:'',r:CK[k].c.map(()=>0),photos:[],note:''}}
+
+/* ---------- 규칙 엔진: 층별 필수 비치물품 ---------- */
+const total=()=>FL.reduce((a,f)=>a+(+S.areas[f]||0),0);
+function required(){
+ const U=USES[S.use],T=total(),out={};
+ const autoAll=U.auto==='all'||T>=(+U.auto||1e9);
+ FL.forEach(f=>{
+  const a=+S.areas[f]||0,list=[];
+  const base=U.ext*(S.fire2?2:1),units=Math.ceil(a/base);
+  list.push({k:'ext',q:Math.max(1,Math.ceil(units/3)),note:'필요 능력단위 '+units+' (3단위형 기준)'});
+  if(f==='1F')list.push({k:'rcv',q:autoAll?1:null,na:!autoAll&&'자동화재탐지설비 대상 아님'});
+  const per=S.fire2?70:40;
+  list.push({k:'det',q:autoAll?Math.ceil(a/per):null,na:!autoAll&&'대상 아님 · 단독경보형감지기 권고',note:autoAll?'면적 '+per+'㎡당 1개':''});
+  list.push({k:'pb',q:autoAll?Math.max(1,Math.ceil(a/1000)):null,na:!autoAll&&'대상 아님'});
+  list.push({k:'bell',q:autoAll?Math.max(1,Math.ceil(a/1000)):null,na:!autoAll&&'대상 아님'});
+  list.push({k:'exit',q:S.stairs+(f==='1F'?1:0),note:'계단 '+S.stairs+(f==='1F'?' + 외부출입구 1':'')});
+  list.push({k:'path',q:undefined,note:'복도 모퉁이·20 m마다(현장 판정)'});
+  list.push({k:'door',q:S.stairs,note:'피난계단 출입문 '+S.stairs});
+  let spr=false,why='';
+  const sub=U.spr.sub;
+  if(U.spr.total&&T>=U.spr.total){spr=true;why='연면적/합계 '+T+'㎡ ≥ '+U.spr.total}
+  else if((isUnder(f)||fnum(f)>=4)&&a>=sub){spr=true;why='지하·4층 이상 층 '+a+'㎡ ≥ '+sub}
+  list.push({k:'spr',q:spr?undefined:null,na:!spr&&'대상 아님 (지하·4층 이상 층 '+sub+'㎡ 미만)',note:spr?why+' · 헤드 전수 확인':''});
+  let hyd=false,hw='';
+  if(T>=3000){hyd=true;hw='연면적 '+T+'㎡ ≥ 3,000'}else if((isUnder(f)||fnum(f)>=4)&&a>=600){hyd=true;hw='지하·4층 이상 층 '+a+'㎡ ≥ 600'}
+  list.push({k:'hyd',q:hyd?1:null,na:!hyd&&'대상 아님',note:hyd?hw:''});
+  if(fnum(f)>=3&&fnum(f)<=10)list.push({k:'desc',q:1,note:'3~10층 층마다'});
+  out[f]=list.sort((x,y)=>ORDER.indexOf(x.k)-ORDER.indexOf(y.k));
+ });
+ return out;
+}
+/* 항목 판정: done/status */
+function judge(f,it){
+ if(it.na)return{done:true,st:'na'};
+ const r=rec(f,it.k);
+ if(r.has===null)return{done:false,st:'todo'};
+ if(r.has==='no')return{done:true,st:'miss',kind:'미비치',detail:'비치 없음'};
+ const found=r.qty===''?null:+r.qty;
+ if(it.q&&found===null)return{done:false,st:'todo'};
+ if(r.r.some(v=>v===0))return{done:false,st:'todo'};
+ if(it.q&&found<it.q)return{done:true,st:'short',kind:'수량 부족',detail:'필요 '+it.q+' / 확인 '+found};
+ const bad=[],warn=[];CK[it.k].c.forEach((c,i)=>{if(r.r[i]===3)bad.push(c[0]);if(r.r[i]===2)warn.push(c[0])});
+ if(bad.length)return{done:true,st:'bad',kind:'동작·상태 불량',detail:bad.join(', ')};
+ if(warn.length)return{done:true,st:'warn',kind:'보수 필요',detail:warn.join(', ')};
+ return{done:true,st:'ok'};
+}
+const RANK={na:0,ok:1,warn:2,bad:3,short:4,miss:4,todo:-1};
+function summarize(){
+ const req=required(),res={};
+ FL.forEach(f=>{
+  const items=req[f].map(it=>{const j=judge(f,it);return Object.assign({it,f},j)});
+  const live=items.filter(x=>x.st!=='na');
+  const done=live.filter(x=>x.done).length;
+  let worst='ok';live.filter(x=>x.done).forEach(x=>{if(RANK[x.st]>RANK[worst])worst=x.st});
+  const fs=live.length&&done<live.length?(done?'prog':'todo'):(worst==='short'||worst==='miss'?'bad':worst);
+  res[f]={items,done,n:live.length,state:fs};
+ });
+ return res;
+}
+const defects=sm=>{const d=[];FL.forEach(f=>sm[f].items.forEach(x=>{if(['miss','short','bad','warn'].includes(x.st))d.push({f,k:x.it.k,name:CK[x.it.k].n,st:x.st,kind:x.kind,detail:x.detail,photos:rec(f,x.it.k).photos.slice(),note:rec(f,x.it.k).note,req:x.it.q,found:rec(f,x.it.k).qty})}));return d};
+const needPhoto=x=>['miss','short','bad'].includes(x.st);
+function readiness(sm){
+ let open=0,nophoto=0;
+ FL.forEach(f=>sm[f].items.forEach(x=>{if(x.st==='na')return;if(!x.done)open++;else if(needPhoto(x)&&!rec(f,x.it.k).photos.length)nophoto++}));
+ return{open,nophoto,ok:open===0&&nophoto===0};
+}
+const stCls={ok:'ok',warn:'warn',bad:'bad',short:'bad',miss:'bad',todo:'no',na:'no',prog:'prog'};
+const stTxt={ok:'정상',warn:'경미',bad:'결함',todo:'미점검',prog:'진행 중',na:'해당 없음'};
+const heatCls={ok:'h-ok',warn:'h-warn',bad:'h-bad',todo:'h-no',prog:'h-prog'};
+
+/* ---------- 3D(아이소) 층 선택 ---------- */
+function iso(states,sel){
+ const col={ok:'var(--green-soft)',warn:'var(--amber-soft)',bad:'var(--red-soft)',todo:'var(--surface)',prog:'var(--blue-soft)'};
+ const sc={ok:'var(--green)',warn:'var(--amber)',bad:'var(--red)',todo:'var(--grey)',prog:'var(--blue)'};
+ let g='';
+ for(let i=FL.length-1;i>=0;i--){
+  const f=FL[i],top=14+i*34,s=states[f]||'todo';
+  g+='<polygon data-f="'+f+'" points="110,'+top+' 200,'+(top+34)+' 110,'+(top+68)+' 20,'+(top+34)+'" fill="'+col[s]+'" stroke="'+(sel===f?'var(--blue)':sc[s])+'" style="stroke-width:'+(sel===f?3:1.5)+'"><title>'+f+' '+stTxt[s]+'</title></polygon><text x="30" y="'+(top+38)+'" font-size="12" font-weight="700" fill="'+(sel===f?'var(--blue)':'var(--mute)')+'" font-family="IBM Plex Mono,monospace" style="pointer-events:none">'+f+'</text>';
+ }
+ return'<svg class="iso" viewBox="0 0 220 210" role="img" aria-label="층별 구조">'+g+'</svg>';
+}
+/* ---------- 렌더 ---------- */
+function render(){
+ $('#r-user').setAttribute('aria-pressed',S.role==='user');$('#r-admin').setAttribute('aria-pressed',S.role==='admin');$('#r-owner').setAttribute('aria-pressed',S.role==='owner');
+ const sm=summarize(),rd=readiness(sm);
+ let steps='',html='';
+ if(S.role==='user'){
+  const t=[['0','⓪ 건물 선택'],['1','① 법정 비치 기준 고지'],['2','② 3D 층별 점검'],['3','③ 리포트 제출']];
+  steps=t.map(a=>'<button data-step="'+a[0]+'" aria-current="'+(S.step==a[0]?'step':'false')+'"'+(((a[0]==='1'&&!S.bld)||((a[0]==='2'||a[0]==='3')&&!(S.bld&&S.ack)))?' disabled':'')+'>'+a[1]+'</button>').join('');
+  html=S.step===0?vSelect():S.step===1?vNotice():S.step===2?vInspect(sm,rd):vReport(sm,rd);
+ }else if(S.role==='admin'){
+  const t=[['mon','모니터링'],['job','작업 분배'],['b3d','3D 열람·배정'],['rep','제출 리포트 ('+REPORTS.length+')'],['rule','기준·규칙'],['doc','설계 맵']];
+  steps=t.map(a=>'<button data-tab="'+a[0]+'" aria-current="'+(S.tab==a[0]?'step':'false')+'">'+a[1]+'</button>').join('');
+  html=S.tab==='mon'?aMon(sm):S.tab==='job'?aJob():S.tab==='b3d'?aB3d(sm):S.tab==='rep'?aRep():S.tab==='doc'?aDoc():aRule();
+ }else{
+  steps='<button aria-current="step">점검 결과 열람</button>';html=vOwner();
+ }
+ $('#steps').innerHTML=steps;$('#view').innerHTML=html;
+ fitStage();
+ if(S.role==='user'&&S.step===2&&!S.gps)$('#view').querySelectorAll('.item button,.item input,.item textarea,[data-fill]').forEach(e=>e.disabled=true);
+}
+/* ① 고지 */
+function vNotice(){
+ const req=required(),T=total();
+ const cell=(f,k)=>{const it=req[f].find(x=>x.k===k);if(!it)return'<td class="na">—</td>';if(it.na)return'<td class="na">대상 아님</td>';return'<td class="n">'+(it.q?it.q+'개':'확인')+'</td>'};
+ const keys=ORDER.filter(k=>FL.some(f=>req[f].some(x=>x.k===k)));
+ const uses=Object.keys(USES).map(u=>'<option'+(u===S.use?' selected':'')+'>'+u+'</option>').join('');
+ return'<div><div class="kick">STEP 1</div><h2>법정 비치 기준 고지</h2><p class="lead">건물 정보를 확인하면 층별 면적에 따라 소방법상 갖춰야 할 소화기·경보·유도등·방화문·스프링클러 등의 필수 수량이 자동 산출됩니다. 이 목록이 점검의 기준이 됩니다.</p></div>'+
+ '<div class="notice"><b>관계인 고지</b> · 특정소방대상물의 관계인은 소방시설을 화재안전기준에 맞게 설치·관리하고, 피난·방화시설을 유지하며, 정기 자체점검을 해야 합니다(소방시설법). 아래 수량은 앱이 면적으로 산출한 <b>참고 기준</b>이며, 최종 판단은 소방설계·점검 전문가와 관할 소방서 확인이 필요합니다. 일부 수치는 원문 대조 전 상태입니다(기준·규칙 탭 참고).</div>'+
+ '<div class="grid g2"><div class="card"><h3>건물 정보</h3><div class="list" style="gap:10px"><label class="qrow"><span style="width:110px">건물</span><b>한빛아파트 (예시)</b></label>'+
+ '<label class="qrow"><span style="width:110px">주 용도</span><select id="use">'+uses+'</select></label>'+
+ '<label class="cb"><input type="checkbox" id="fire2"'+(S.fire2?' checked':'')+'><span>주요구조부 내화구조이고 벽·반자 마감이 불연·준불연·난연 재료 (소화기 면적 기준 2배 적용)</span></label>'+
+ '<label class="qrow"><span style="width:110px">층별 계단 수</span><input type="number" id="stairs" min="1" max="6" value="'+S.stairs+'"><span class="small">피난구유도등·방화문 개수에 반영</span></label></div></div>'+
+ '<div class="card"><h3>층별 바닥면적 (㎡)</h3><div class="list" style="gap:6px">'+FL.map(f=>'<label class="qrow"><span style="width:44px;font:700 13px var(--mono)">'+f+'</span><input type="number" min="0" step="10" data-area="'+f+'" value="'+S.areas[f]+'"><span class="small">'+(isUnder(f)?'지하층':'지상층')+'</span></label>').join('')+'</div><p class="small" style="margin:8px 0 0">연면적 <b>'+T.toLocaleString()+'㎡</b> · 면적을 바꿔 스프링클러·옥내소화전 대상이 달라지는지 확인해 보세요.</p></div></div>'+
+ '<div><h3>층별 필수 비치물품 (자동 산출)</h3><div class="tw"><table class="mx"><tr><th>설비</th>'+FL.map(f=>'<th class="c">'+f+'</th>').join('')+'<th>산출 근거</th></tr>'+
+ keys.map(k=>'<tr><td><b>'+CK[k].n+'</b></td>'+FL.map(f=>cell(f,k)).join('')+'<td class="small" style="min-width:260px">'+esc(CK[k].basis)+'<br><span class="tag">'+esc(CK[k].v)+'</span></td></tr>').join('')+'</table></div></div>'+
+ '<div class="card"><label class="cb"><input type="checkbox" id="ack"'+(S.ack?' checked':'')+'><span><b>고지 내용을 확인했습니다.</b> 위 비치 기준과 점검 항목을 확인했으며, 점검 결과를 사실대로 입력·사진으로 증빙하겠습니다.</span></label><div class="row" style="margin-top:12px"><button class="btn blue" id="go2"'+(S.ack?'':' disabled')+'>층별 점검 시작 →</button></div></div>';
+}
+/* ② 점검 */
+function vInspect(sm,rd){
+ const f=S.floor,F=sm[f],states={};FL.forEach(x=>states[x]=sm[x].state);
+ const list=FL.map(x=>'<button data-floor="'+x+'" aria-pressed="'+(x===f)+'"><b style="font-family:var(--mono)">'+x+'</b><span><span class="small">'+sm[x].done+'/'+sm[x].n+' 항목</span><span class="bar"><i style="width:'+(sm[x].n?sm[x].done/sm[x].n*100:0)+'%"></i></span></span><span class="pill p-'+({ok:'ok',warn:'warn',bad:'bad',todo:'no',prog:'blue'}[sm[x].state])+'">'+stTxt[sm[x].state]+'</span></button>').join('');
+ const all=FL.reduce((a,x)=>a+sm[x].done,0),alln=FL.reduce((a,x)=>a+sm[x].n,0);
+ let h='<div><div class="kick">STEP 2</div><h2>층별 점검</h2><p class="lead">층을 고르고 항목마다 ① 비치 유무 ② 확인 수량 ③ 동작·상태 점검 ④ 사진을 입력하세요. 없음·수량 부족·불량은 사진이 필수입니다.</p></div>';
+ h+=(S.gps?'':'<div class="notice red">현장 100 m 밖입니다. 열람만 가능하고 점검 입력은 잠겨 있습니다.</div>')+'<div class="v3"><div>'+ctl()+stage3d(sm)+LEG+'</div><aside class="card"><h3>층별 진행</h3><div class="fl-list">'+list+'</div><p class="small" style="margin:10px 0 0">전체 '+all+'/'+alln+' 항목 완료</p><p class="small" style="margin:6px 0 0">마커를 누르면 그 설비의 점검 항목으로 이동합니다. 마커 색 = 점검 상태.</p></aside></div><section class="list" style="gap:12px">';
+ h+='<div class="row"><h3 style="margin:0">'+f+' · '+(+S.areas[f]).toLocaleString()+'㎡ ('+(isUnder(f)?'지하층':'지상층')+')</h3><span class="sp"></span><button class="btn ghost sm" data-fill="'+f+'">시연: 이 층 정상 채우기</button></div>';
+ F.items.forEach(x=>{
+  const it=x.it,C=CK[it.k],na=x.st==='na';
+  const r=na?null:rec(f,it.k);
+  h+='<article id="it-'+it.k+'" class="item'+(na?' na':'')+(S.focus===it.k?' focus':'')+'"><header><span class="pill p-blue">'+C.s+'</span><b>'+C.n+'</b>'+(na?'<span class="pill p-no">'+esc(it.na)+'</span>':(it.q?'<span class="pill p-no">필수 '+it.q+'개</span>':'<span class="pill p-no">수량 현장 판정</span>')+(it.note?'<span class="small">'+esc(it.note)+'</span>':''))+'<span class="sp"></span>'+(na?'':'<span class="pill p-'+({ok:'ok',warn:'warn',bad:'bad',short:'bad',miss:'bad',todo:'no'}[x.st])+'">'+({ok:'정상',warn:'보수 필요',bad:'불량',short:'수량 부족',miss:'미비치',todo:'점검 전'}[x.st])+'</span>')+'</header>';
+  if(!na){
+   h+='<div class="body"><div class="qrow"><div class="opts" style="min-width:210px"><button class="y" data-has="'+it.k+'" data-v="yes" aria-pressed="'+(r.has==='yes')+'">있음</button><button class="n" data-has="'+it.k+'" data-v="no" aria-pressed="'+(r.has==='no')+'">없음</button></div>'+
+    (r.has==='yes'?'<label class="qrow"><span>확인 수량</span><input type="number" min="0" data-qty="'+it.k+'" value="'+esc(r.qty)+'"><span class="small">개'+(it.q?' (필수 '+it.q+')':'')+'</span></label>':'')+'</div>';
+   if(r.has==='yes'){
+    h+='<div class="list" style="gap:6px">'+C.c.map((c,i)=>'<div class="ck"><div class="q">'+esc(c[0])+(c[2]?' <span class="pill p-warn">동작 확인</span>':'')+'<span class="small">'+esc(c[1])+'</span></div><div class="opts">'+[['정상',1],['보수필요',2],['불량',3]].map(o=>'<button class="o'+o[1]+'" data-ck="'+it.k+':'+i+'" data-v="'+o[1]+'" aria-pressed="'+(r.r[i]===o[1])+'">'+o[0]+'</button>').join('')+'</div></div>').join('')+'</div>';
+   }
+   if(r.has!==null){
+    const need=needPhoto(x);
+    h+='<div><div class="small" style="margin-bottom:6px">사진 '+r.photos.length+'장'+(need?' · <b style="color:var(--red)">증빙 사진 필수</b>':' · 권장')+'</div><div class="photos">'+r.photos.map((p,i)=>'<div class="ph"><img src="'+p+'" alt="점검 사진 '+(i+1)+'" data-lb="'+it.k+':'+i+'"><button data-del="'+it.k+':'+i+'" aria-label="사진 삭제">×</button></div>').join('')+
+     '<span class="addph"><label class="btn ghost sm">📷 촬영·선택<input type="file" accept="image/*" capture="environment" multiple hidden data-file="'+it.k+'"></label><button class="btn ghost sm" data-sample="'+it.k+'">샘플 사진(시연)</button></span></div>'+
+     '<textarea placeholder="메모 (위치, 증상, 조치 필요 사항)" data-note="'+it.k+'">'+esc(r.note)+'</textarea></div>';
+   }
+   h+='</div>';
+  }
+  h+='</article>';
+ });
+ const i=FL.indexOf(f);
+ h+='<div class="row"><button class="btn ghost" data-nav="'+(i>0?FL[i-1]:'')+'"'+(i>0?'':' disabled')+'>← 위층</button><button class="btn ghost" data-nav="'+(i<FL.length-1?FL[i+1]:'')+'"'+(i<FL.length-1?'':' disabled')+'>아래층 →</button><span class="sp"></span><button class="btn blue" id="go3">리포트 만들기 →</button></div></section>';
+ return h;
+}
+/* ③ 리포트 */
+function vReport(sm,rd){
+ if(S.submitted){const r=REPORTS.find(x=>x.id===S.submitted);return'<div><div class="kick">STEP 3</div><h2>제출 완료</h2></div><div class="notice blue"><b>리포트 '+esc(r.id)+'</b>가 관리자에게 접수되었습니다. 결함 '+r.defects.length+'건 · 사진 '+r.photoCount+'장 · '+esc(r.at)+'</div><div class="row"><button class="btn blue" id="toAdmin">관리자 모니터링에서 보기 →</button><button class="btn ghost" id="again">새 점검 시작</button></div>'}
+ const d=defects(sm),pc=FL.reduce((a,f)=>a+sm[f].items.reduce((b,x)=>b+(x.st==='na'?0:rec(f,x.it.k).photos.length),0),0);
+ let req=0,found=0;FL.forEach(f=>sm[f].items.forEach(x=>{if(x.st!=='na'&&x.it.q){req+=x.it.q;found+=Math.min(x.it.q,+rec(f,x.it.k).qty||0)}}));
+ let h='<div><div class="kick">STEP 3</div><h2>점검 리포트</h2><p class="lead">점검 결과가 자동으로 정리됩니다. 사진과 함께 관리자에게 제출하세요.</p></div>';
+ h+='<div class="grid g4"><div class="kpi"><b>'+FL.reduce((a,f)=>a+sm[f].done,0)+'/'+FL.reduce((a,f)=>a+sm[f].n,0)+'</b><span>점검 완료 항목</span></div><div class="kpi"><b style="color:var(--red)">'+d.length+'</b><span>결함·보수 항목</span></div><div class="kpi"><b>'+found+'/'+req+'</b><span>필수 수량 충족</span></div><div class="kpi"><b>'+pc+'</b><span>첨부 사진</span></div></div>';
+ h+='<div class="tw"><table><tr><th>층</th><th>상태</th><th class="c">완료</th><th class="c">결함</th></tr>'+FL.map(f=>'<tr><td><b>'+f+'</b></td><td><span class="heat '+heatCls[sm[f].state]+'">'+stTxt[sm[f].state]+'</span></td><td class="c">'+sm[f].done+'/'+sm[f].n+'</td><td class="c">'+d.filter(x=>x.f===f).length+'</td></tr>').join('')+'</table></div>';
+ h+='<div><h3>결함·보수 항목</h3>'+(d.length?'<div class="dfx">'+d.map((x,n)=>dfCard(x)).join('')+'</div>':'<div class="notice blue">결함이 없습니다.</div>')+'</div>';
+ h+='<div class="card"><h3>제출 전 확인</h3>'+(rd.ok?'<p style="margin:0 0 10px;color:var(--green)">모든 항목이 입력되었고 필수 사진이 첨부되었습니다.</p>':'<p style="margin:0 0 10px;color:var(--red)">미입력 항목 '+rd.open+'건'+(rd.nophoto?' · 필수 사진 누락 '+rd.nophoto+'건':'')+' — 층별 점검으로 돌아가 완료하세요.</p>')+'<div class="row"><button class="btn ghost" id="back2">← 점검으로</button><span class="sp"></span><button class="btn blue" id="submit"'+(rd.ok?'':' disabled')+'>관리자에게 제출</button></div></div>';
+ return h;
+}
+function dfCard(x){
+ return'<div class="df"><div class="row">'+(x.fixed?'<span class="pill p-ok">조치 완료</span>':'')+'<span class="pill p-'+(x.st==='warn'?'warn':'bad')+'">'+esc(x.kind)+'</span><b>'+esc(x.f)+' · '+esc(x.name)+'</b><span class="small">'+esc(x.detail)+'</span></div>'+(x.note?'<div class="small" style="margin-top:4px">메모: '+esc(x.note)+'</div>':'')+
+  (x.photos.length?'<div class="photos" style="margin-top:8px">'+x.photos.map(p=>'<div class="ph"><img src="'+p+'" alt="증빙 사진" data-src="'+p+'"></div>').join('')+'</div>':'<div class="small" style="margin-top:4px;color:var(--red)">사진 없음</div>')+'</div>';
+}
+/* ---------- 관리자 ---------- */
+const SEED_STATE={ // 시연용 다른 건물
+ '중앙빌딩':{'4F':'ok','3F':'warn','2F':'ok','1F':'bad','B1':'ok'},
+ '푸른솔 상가':{'4F':'ok','3F':'prog','2F':'todo','1F':'todo','B1':'todo'},
+ '미래물류센터':{'4F':'todo','3F':'todo','2F':'todo','1F':'todo','B1':'todo'}
+};
+function seedReports(){
+ REPORTS.push({id:'R-2610-014',bld:'중앙빌딩',insp:'박서연',at:'10/15 09:42',status:'접수',loc:'48 m · ±11 m',photoCount:3,states:SEED_STATE['중앙빌딩'],
+  defects:[{f:'1F',k:'pb',name:'발신기',st:'bad',kind:'동작·상태 불량',detail:'누름 작동 · 응답·표시등',photos:[ph('1F 발신기 응답등 소등','#8a3b3b')],note:'누름 시 수신기 신호 없음',req:1,found:1},
+   {f:'1F',k:'ext',name:'소화기',st:'short',kind:'수량 부족',detail:'필요 2 / 확인 1',photos:[ph('1F 소화기 1개','#7a5a2b'),ph('1F 복도 전경','#4b5f7a')],note:'복도 끝 소화기 미비치',req:2,found:1},
+   {f:'3F',k:'door',name:'방화문(피난계단)',st:'warn',kind:'보수 필요',detail:'자동닫힘',photos:[],note:'도어클로저 속도 느림',req:2,found:2}],comment:''});
+ REPORTS.push({id:'R-2610-009',bld:'한빛아파트',insp:'이도윤',at:'10/08 14:20',status:'승인',loc:'30 m · ±8 m',photoCount:1,states:{'4F':'ok','3F':'warn','2F':'ok','1F':'ok','B1':'ok'},defects:[{f:'3F',k:'ext',name:'소화기',st:'warn',kind:'보수 필요',detail:'압력게이지',photos:[ph('3F 소화기 압력게이지','#7a5a2b')],note:'게이지 바늘 경계',req:1,found:1}],comment:''});
+}
+function liveBld(sm){
+ const st={},d=defects(sm);FL.forEach(f=>st[f]=sm[f].state);
+ const done=FL.reduce((a,f)=>a+sm[f].done,0),n=FL.reduce((a,f)=>a+sm[f].n,0);
+ return{name:'한빛아파트',insp:'이도윤',st,pct:n?Math.round(done/n*100):0,def:d.length};
+}
+function aMon(sm){
+ const lv=liveBld(sm);
+ const blds=[lv,{name:'중앙빌딩',insp:'박서연',st:SEED_STATE['중앙빌딩'],pct:100,def:3},{name:'푸른솔 상가',insp:'김하준',st:SEED_STATE['푸른솔 상가'],pct:34,def:0},{name:'미래물류센터',insp:'미배정',st:SEED_STATE['미래물류센터'],pct:0,def:0}];
+ const sub=REPORTS.length,defT=REPORTS.reduce((a,r)=>a+r.defects.length,0),wait=REPORTS.filter(r=>r.status==='접수'||r.status==='확인 중').length,fix=REPORTS.filter(r=>r.status==='보완 요청').length;
+ let h='<div><div class="kick">ADMIN</div><h2>점검 모니터링</h2><p class="lead">점검원이 입력하는 진행 상황이 실시간으로 반영됩니다(이 시연에서는 점검원 화면의 입력이 바로 보입니다). 제출된 리포트는 아래 목록과 리포트 탭에서 확인합니다.</p></div>';
+ h+='<div class="grid g4"><div class="kpi"><b>'+blds.length+'</b><span>오늘 점검 건물</span></div><div class="kpi"><b>'+sub+'</b><span>제출 리포트</span></div><div class="kpi"><b style="color:var(--amber)">'+wait+'</b><span>확인 대기</span></div><div class="kpi"><b style="color:var(--red)">'+defT+'</b><span>결함 합계 · 보완요청 '+fix+'</span></div></div>';
+ h+='<div class="tw"><table><tr><th>건물</th><th>점검원</th><th>진행</th>'+FL.map(f=>'<th class="c">'+f+'</th>').join('')+'<th class="c">결함</th></tr>'+blds.map(b=>'<tr><td><b>'+b.name+'</b>'+(b.name==='한빛아파트'?' <span class="pill p-blue">실시간</span>':'')+'</td><td>'+b.insp+'</td><td style="min-width:110px">'+b.pct+'%<div class="bar"><i style="width:'+b.pct+'%"></i></div></td>'+FL.map(f=>'<td class="c"><span class="heat '+heatCls[b.st[f]]+'">'+stTxt[b.st[f]]+'</span></td>').join('')+'<td class="c">'+b.def+'</td></tr>').join('')+'</table></div>';
+ h+='<div class="legend"><span><i style="background:var(--green)"></i>정상</span><span><i style="background:var(--amber)"></i>경미</span><span><i style="background:var(--red)"></i>결함</span><span><i style="background:var(--blue)"></i>진행 중</span><span><i style="background:var(--grey)"></i>미점검</span></div>';
+ h+='<div class="grid g2"><div class="card"><h3>한빛아파트 · 층 구조</h3>'+iso(lv.st,'')+'</div><div class="card"><h3>최근 활동</h3><div class="list" style="gap:6px">'+
+  REPORTS.slice(0,4).map(r=>'<div class="small">'+r.at+' · <b>'+r.insp+'</b> '+r.bld+' 리포트 제출 ('+r.status+')</div>').join('')+'<div class="small">'+lv.pct+'% · 이도윤 한빛아파트 점검 중</div><div class="small">김하준 푸른솔 상가 3F 점검 중</div></div></div></div>';
+ return h;
+}
+function aRep(){
+ const sel=REPORTS.find(r=>r.id===S.rep)||REPORTS[0];
+ if(!sel)return'<div class="notice blue">제출된 리포트가 없습니다.</div>';
+ let h='<div><div class="kick">ADMIN</div><h2>제출 리포트</h2></div><div class="ins" style="grid-template-columns:minmax(0,300px) minmax(0,1fr)"><div class="list">'+REPORTS.map(r=>'<button class="lrow" data-rep="'+r.id+'" aria-pressed="'+(r.id===sel.id)+'"><span><b>'+r.bld+'</b><br><span class="small">'+r.id+' · '+r.insp+' · '+r.at+'</span></span><span class="pill p-'+({'접수':'blue','확인 중':'warn','승인':'ok','보완 요청':'bad'}[r.status])+'">'+r.status+'</span></button>').join('')+'</div><div class="list" style="gap:12px">';
+ h+='<div class="card"><div class="row"><h3 style="margin:0">'+sel.bld+' · '+sel.id+'</h3><span class="sp"></span><span class="pill p-no">위치 '+sel.loc+'</span></div><p class="small" style="margin:4px 0 8px">점검원 '+sel.insp+' · '+sel.at+' · 사진 '+sel.photoCount+'장</p><div class="row">'+FL.map(f=>'<div style="text-align:center"><div class="small">'+f+'</div><span class="heat '+heatCls[sel.states[f]||'todo']+'">'+stTxt[sel.states[f]||'todo']+'</span></div>').join('')+'</div></div>';
+ h+='<div><h3>결함·보수 항목 ('+sel.defects.length+')</h3>'+(sel.defects.length?'<div class="dfx">'+sel.defects.map(dfCard).join('')+'</div>':'<div class="notice blue">결함 없음</div>')+'</div>';
+ h+='<div class="card"><h3>관리자 조치</h3><textarea id="cmt" placeholder="의견·보완 요청 사항">'+esc(sel.comment)+'</textarea><div class="row" style="margin-top:10px"><button class="btn ghost sm" data-act="확인 중">확인 중</button><button class="btn ghost sm" data-act="보완 요청">보완 요청</button><button class="btn blue sm" data-act="승인">승인</button></div>'+(sel.status==='승인'?'<div class="small" style="margin-top:8px;color:var(--blue)">승인된 리포트는 건물주 열람 화면에 공개됩니다.</div>':'')+(S.toast?'<div class="small" style="margin-top:8px;color:var(--green)">'+esc(S.toast)+'</div>':'')+'</div></div></div>';
+ return h;
+}
+function aRule(){
+ const U=USES;
+ return'<div><div class="kick">ADMIN</div><h2>기준·규칙</h2><p class="lead">앱이 필수 수량과 점검 항목을 산출하는 데 쓰는 기준입니다. “원문 대조 필요” 표시는 소방청 원문과 대조해 확정해야 하는 값입니다.</p></div>'+
+ '<div class="notice red"><b>검증 상태</b> · 시행령 별표 4의 설치대상 수치는 2차 자료(요약 페이지)로, 분말소화기 10년·발신기 수평거리 25 m는 일부 자료로 확인했습니다. 소화기 능력단위·보행거리, 감지기·경종·유도등 산정, 소방청 점검표 문구는 원문을 열람하지 못해 대조가 필요합니다. 확정 전 소방 전문가 검수를 거치세요.</div>'+
+ '<div class="tw"><table><tr><th>용도</th><th class="c">소화기 1능력단위당 면적(㎡)</th><th class="c">자탐설비 연면적</th><th>스프링클러</th></tr>'+Object.keys(U).map(k=>'<tr><td>'+k+'</td><td class="c">'+U[k].ext+'</td><td class="c">'+(U[k].auto==='all'?'모든 층':'≥ '+U[k].auto)+'</td><td class="small">'+(U[k].spr.total?'합계 ≥ '+U[k].spr.total+'㎡ 모든 층 · ':'')+'지하·4층 이상 층 ≥ '+U[k].spr.sub+'㎡</td></tr>').join('')+'</table></div>'+
+ '<div class="tw"><table><tr><th>설비</th><th>산출·점검 근거</th><th>검증 상태</th><th>점검 항목</th></tr>'+ORDER.map(k=>'<tr><td><b>'+CK[k].n+'</b></td><td class="small" style="min-width:240px">'+esc(CK[k].basis)+'</td><td class="small">'+esc(CK[k].v)+'</td><td class="small">'+CK[k].c.map(c=>esc(c[0])+(c[2]?'(동작)':'')).join(' · ')+'</td></tr>').join('')+'</table></div>';
+}
+/* ---------- 3D 건물 (ver1.0 병합) ---------- */
+const POS={rcv:[14,26],ext:[22,72],det:[48,40],pb:[84,78],bell:[74,64],exit:[92,34],path:[58,54],door:[90,50],spr:[40,28],hyd:[68,80],desc:[8,52]};
+const ROOMS='<div class="rm" style="left:4%;top:10%;width:34%;height:44%"></div><div class="rm" style="left:40%;top:10%;width:26%;height:44%"></div><div class="rm" style="left:4%;top:58%;width:62%;height:34%"></div><div class="rm" style="left:68%;top:70%;width:20%;height:22%"></div><div class="stc"></div>';
+let drag=null,moved=0;
+document.addEventListener('pointerdown',e=>{if(!e.target.closest('.stage')||S.view==='top')return;drag={x:e.clientX,y:e.clientY,rx:S.rx,rz:S.rz};moved=0});
+addEventListener('pointermove',e=>{if(!drag)return;const dx=e.clientX-drag.x,dy=e.clientY-drag.y;moved=Math.max(moved,Math.abs(dx)+Math.abs(dy));if(moved<4)return;S.rz=drag.rz+dx*.4;S.rx=Math.max(20,Math.min(80,drag.rx-dy*.3));const sc=$('#scene');if(sc){sc.style.setProperty('--rx',S.rx+'deg');sc.style.setProperty('--rz',S.rz+'deg')}});
+addEventListener('pointerup',()=>{drag=null});
+function fitStage(){const st=$('#stage');if(!st)return;st.querySelector('.scene').style.setProperty('--sc',Math.min(1.15,st.clientWidth/430).toFixed(3))}
+addEventListener('resize',fitStage);
+const mkCls=s=>s==='ok'?' s-ok':s==='warn'?' s-warn':(s==='bad'||s==='short'||s==='miss')?' s-bad':'';
+function stage3d(sm){
+ const req=required(),top=S.view==='top',n=FL.length;
+ let h='<div class="stage" id="stage" aria-label="건물 3D 층별 구조. 드래그하여 회전"><div class="scene" id="scene" style="--rx:'+(top?0:S.rx)+'deg;--rz:'+(top?0:S.rz)+'deg">';
+ FL.forEach((f,i)=>{
+  const z=top?0:(n-1-i)*S.gap-(n-1)*S.gap/2,sel=S.floor===f;
+  h+='<div class="fl'+(sel?' sel':' dim')+'" data-fl="'+f+'" style="transform:translateZ('+z+'px);'+(top&&!sel?'display:none':'')+'"><span class="fn">'+f+'</span>'+ROOMS+
+   sm[f].items.filter(x=>x.st!=='na'&&S.layers[x.it.k]!==false).map(x=>{const p=POS[x.it.k]||[50,50];return'<button class="mk'+mkCls(x.st)+(S.focus===x.it.k&&sel?' cur':'')+(sel?'':' off')+'" data-mk="'+x.it.k+'" data-f="'+f+'" style="left:'+p[0]+'%;top:'+p[1]+'%" aria-label="'+f+' '+CK[x.it.k].n+'">'+CK[x.it.k].s+'</button>'}).join('')+'</div>';
+ });
+ return h+'</div><div class="hint">드래그: 회전 · 마커: 점검 · 층: 선택</div></div>';
+}
+function ctl(){
+ const req=required();
+ const keys=ORDER.filter(k=>FL.some(f=>req[f].some(x=>x.k===k&&!x.na)));
+ return'<div class="ctl"><div class="seg" role="group" aria-label="보기"><button data-view="iso" aria-pressed="'+(S.view==='iso')+'">입체</button><button data-view="top" aria-pressed="'+(S.view==='top')+'">평면</button></div>'+
+ '<label>층 간격 <input type="range" id="gap" min="40" max="130" value="'+S.gap+'"></label>'+
+ (S.role==='user'?'<label><input type="checkbox" id="gps"'+(S.gps?' checked':'')+'> 현장 100 m 안 (시뮬레이션)</label>':'')+'</div>'+
+ '<div class="ctl" role="group" aria-label="설비 레이어"><span class="small">레이어</span>'+keys.map(k=>'<button class="chip" role="switch" aria-checked="'+(S.layers[k]!==false)+'" data-lay="'+k+'">'+CK[k].s+' '+CK[k].n+'</button>').join('')+'</div>';
+}
+const LEG='<div class="legend" style="margin-top:8px"><span><i style="background:var(--grey)"></i>점검 전</span><span><i style="background:var(--green)"></i>정상</span><span><i style="background:var(--amber)"></i>보수·경미</span><span><i style="background:var(--red)"></i>불량·미비치·부족</span></div>';
+/* ⓪ 건물 선택 */
+function vSelect(){
+ const B=[['한빛아파트','성남시 분당구 · 지상 4층·지하 1층',S.gps?85:240,1],['푸른솔 상가','성남시 수정구',S.gps?80:260,0],['중앙빌딩','서울 강남구',150,0],['미래물류센터','용인시 처인구',620,0]];
+ return'<div><div class="kick">STEP 0</div><h2>건물 선택</h2><p class="lead">현장 100 m 안의 건물만 점검을 시작할 수 있습니다. 100 m 밖에서는 열람만 됩니다. (위치는 시뮬레이션입니다.)</p></div>'+
+ '<label class="cb"><input type="checkbox" id="gps"'+(S.gps?' checked':'')+'><span>현장 100 m 안 (시뮬레이션) — 끄면 한빛아파트도 240 m 밖이 되어 점검 입력이 잠깁니다.</span></label>'+
+ '<div class="list">'+B.map(b=>'<div class="card"><div class="row"><div><b>'+b[0]+'</b><div class="small">'+b[1]+'</div></div><span class="sp"></span><span class="pill '+(b[2]<=100?'p-ok':'p-warn')+'">'+b[2]+' m</span>'+(b[3]?'<button class="btn blue sm" data-bld="'+b[0]+'">'+(b[2]<=100?'점검 시작':'열람만')+'</button>':'<span class="small">이 시연은 한빛아파트만 연결</span>')+'</div></div>').join('')+'</div>';
+}
+/* 건물주 */
+function vOwner(){
+ const rs=REPORTS.filter(r=>r.status==='승인');
+ let h='<div><div class="kick">OWNER</div><h2>점검 결과 열람</h2><p class="lead">관리자가 승인한 리포트만 건물주에게 공개됩니다. 결함은 조치 후 완료로 표시하면 관리자 화면에도 반영됩니다.</p></div>';
+ if(!rs.length)return h+'<div class="notice blue">승인된 리포트가 아직 없습니다.</div>';
+ return h+rs.map(r=>{const n=r.defects.filter(x=>x.fixed).length;
+  return'<div class="card"><div class="row"><h3 style="margin:0">'+r.bld+' · '+r.id+'</h3><span class="sp"></span><span class="pill p-'+(n===r.defects.length?'ok':'warn')+'">조치 '+n+'/'+r.defects.length+'</span></div><p class="small" style="margin:4px 0 8px">점검원 '+r.insp+' · '+r.at+' · 사진 '+r.photoCount+'장</p><div class="row" style="margin-bottom:10px">'+FL.map(f=>'<div style="text-align:center"><div class="small">'+f+'</div><span class="heat '+heatCls[r.states[f]||'todo']+'">'+stTxt[r.states[f]||'todo']+'</span></div>').join('')+'</div><div class="dfx">'+r.defects.map((x,i)=>'<div>'+dfCard(x)+'<div style="margin-top:6px"><button class="btn ghost sm" data-fix="'+r.id+':'+i+'">'+(x.fixed?'조치 완료 취소':'조치 완료로 표시')+'</button></div></div>').join('')+'</div></div>'}).join('');
+}
+/* 관리자: 작업 분배 / 3D / 설계 */
+const JOBS=[{id:1,bld:'미래물류센터',note:'작동점검 · 10/18 · 기한 임박',who:null},{id:2,bld:'중앙빌딩',note:'박서연 예정 신청 · 10/19',who:null,req:1},{id:3,bld:'한빛아파트',note:'10/15 · 진행 중 3층',who:'이도윤'},{id:4,bld:'푸른솔 상가',note:'10/16 · 수락 대기',who:'이도윤'},{id:5,bld:'한빛아파트 B1',note:'10/17 · 확정',who:'박서연'}];
+const NAMES=['이도윤','박서연','김하준'];
+function aJob(){
+ const col=(t,w)=>{const js=JOBS.filter(j=>j.who===w);return'<div class="col"><h3 style="margin:0">'+t+' <span class="pill '+(w?(js.length>3?'p-bad':'p-no'):'p-bad')+'">'+js.length+'</span></h3>'+js.map(j=>'<div class="tk'+(j.req?' req':'')+'"><b>'+j.bld+'</b>'+(j.req?' <span class="pill p-warn">신청</span>':'')+'<div class="small">'+j.note+'</div><select data-job="'+j.id+'" aria-label="배정"><option value="">미배정</option>'+NAMES.map(n=>'<option'+(j.who===n?' selected':'')+'>'+n+'</option>').join('')+'</select></div>').join('')+(js.length?'':'<div class="small">비어 있음</div>')+'</div>'};
+ return'<div><div class="kick">ADMIN</div><h2>작업 분배</h2><p class="lead">미배정 작업과 사용자의 예정 신청을 사용자에게 배정합니다. 배정하면 사용자에게 수락·거절 알림이 갑니다(시연). 한 사용자에게 하루 3건을 넘기면 경고가 표시됩니다.</p></div><div class="board">'+col('미배정',null)+NAMES.map(n=>col(n,n)).join('')+'</div>'+
+ (NAMES.some(n=>JOBS.filter(j=>j.who===n).length>3)?'<div class="notice red">한 사용자에게 3건을 넘게 배정했습니다.</div>':'');
+}
+function aB3d(sm){
+ const f=S.floor,F=sm[f];
+ const list=FL.map(x=>'<button data-floor="'+x+'" aria-pressed="'+(x===f)+'"><b style="font-family:var(--mono)">'+x+'</b><span><span class="small">'+sm[x].done+'/'+sm[x].n+' 항목 · '+(S.asg[x]||'미배정')+'</span><span class="bar"><i style="width:'+(sm[x].n?sm[x].done/sm[x].n*100:0)+'%"></i></span></span><span class="pill p-'+({ok:'ok',warn:'warn',bad:'bad',todo:'no',prog:'blue'}[sm[x].state])+'">'+stTxt[sm[x].state]+'</span></button>').join('');
+ return'<div><div class="kick">ADMIN</div><h2>3D 건물 열람·층 담당</h2><p class="lead">한빛아파트의 층별 점검 상태를 3D로 열람하고 층 담당자를 배정합니다. 점검 입력은 점검원만 합니다.</p></div>'+
+ '<div class="v3"><div>'+ctl()+stage3d(sm)+LEG+'</div><aside class="card"><h3>층별 진행·담당</h3><div class="fl-list">'+list+'</div><div class="row" style="margin:12px 0 8px"><b>'+f+' 담당</b><select id="asg"><option value="">미배정</option>'+NAMES.map(n=>'<option'+(S.asg[f]===n?' selected':'')+'>'+n+'</option>').join('')+'</select></div><h3>설비 현황</h3><div class="list" style="gap:6px">'+F.items.map(x=>'<div class="row small"><span><b>'+CK[x.it.k].n+'</b> '+(x.st==='na'?'':(x.it.q?'필수 '+x.it.q+' / 확인 '+(rec(f,x.it.k).qty||'-'):''))+'</span><span class="sp"></span><span class="pill p-'+({ok:'ok',warn:'warn',bad:'bad',short:'bad',miss:'bad',todo:'no',na:'no'}[x.st])+'">'+({ok:'정상',warn:'보수 필요',bad:'불량',short:'수량 부족',miss:'미비치',todo:'점검 전',na:'해당 없음'}[x.st])+'</span></div>').join('')+'</div></aside></div>';
+}
+function aDoc(){
+ const M=[['공통 진입','',[['A1','역할 선택'],['A2','간편 회원가입'],['A3','인적사항 안내'],['A4','로그인']]],['사용자 · 기존 와이어프레임','',[['H1','사용자 홈'],['P1~P5','인적사항 5단계'],['G1~G5','위치·100 m 작업 선택'],['S1~S5','예정 신청·배정'],['M1~M3','내정보·알림·위치동의']]],['사용자 · 점검 (이 앱)','new',[['⓪','건물 선택 · GPS 100 m'],['①','법정 비치 기준 고지'],['②','3D 층별 점검 (유무·수량·동작·사진)'],['③','리포트 제출']]],['관리자 (이 앱)','new',[['AD1','모니터링'],['AD3','작업 분배'],['AD4','3D 열람·층 담당'],['AD6','제출 리포트·승인'],['AD5','기준·규칙']]],['건물주 (이 앱)','new',[['O1','점검 결과 열람'],['O2','조치 완료 표시']]]];
+ const flows=[['사용자 점검',['건물 선택','고지 확인','3D 층별 점검','리포트 제출']],['관리자 처리',['모니터링','리포트 확인','보완 요청 / 승인']],['건물주',['승인된 리포트 열람','조치 완료 표시']]];
+ return'<div><div class="kick">ADMIN</div><h2>설계 맵</h2><p class="lead">이 웹앱이 구현한 화면의 구조입니다. 파란 테두리가 이번 통합 앱에서 동작하는 부분이고, 나머지(가입·인적사항·예정 신청·위치 로그)는 앞서 만든 와이어프레임 범위입니다.</p></div><div class="sm-cols">'+M.map(c=>'<div class="card'+(c[1]?' newc':'')+'"><h3>'+c[0]+'</h3><ul class="ul">'+c[2].map(i=>'<li><span class="tag">'+i[0]+'</span> '+i[1]+'</li>').join('')+'</ul></div>').join('')+'</div>'+
+ '<div class="card"><h3>화면 이동 순서</h3>'+flows.map(f=>'<div class="row" style="margin:6px 0"><b style="min-width:90px">'+f[0]+'</b>'+f[1].map((x,i)=>(i?'<span class="small">→</span>':'')+'<span class="pill p-no">'+x+'</span>').join('')+'</div>').join('')+'</div>';
+}
+/* ---------- 이벤트 ---------- */
+function resizePhoto(file){return new Promise(res=>{const fr=new FileReader();fr.onload=()=>{const im=new Image();im.onload=()=>{const m=720,s=Math.min(1,m/Math.max(im.width,im.height)),w=Math.round(im.width*s),h=Math.round(im.height*s),c=document.createElement('canvas');c.width=w;c.height=h;c.getContext('2d').drawImage(im,0,0,w,h);res(c.toDataURL('image/jpeg',.72))};im.onerror=()=>res(null);im.src=fr.result};fr.onerror=()=>res(null);fr.readAsDataURL(file)})}
+function fillFloor(f){const sm=summarize();sm[f].items.forEach(x=>{if(x.st==='na')return;const r=rec(f,x.it.k);r.has='yes';r.qty=x.it.q?String(x.it.q):'1';r.r=r.r.map(()=>1)})}
+document.addEventListener('click',e=>{
+ const t=e.target,c=s=>t.closest(s);let b;
+ if(t.id==='r-owner'){S.role='owner';return render()}
+ if(b=c('[data-bld]')){S.bld=b.dataset.bld;S.step=1;return render()}
+ if(b=c('[data-mk]')){if(moved>=4){moved=0;return}S.floor=b.dataset.f;S.focus=b.dataset.mk;render();if(S.role==='user')setTimeout(()=>{const x=document.getElementById('it-'+S.focus);x&&x.scrollIntoView({behavior:'smooth',block:'center'})},30);return}
+ if(b=c('[data-fl]')){if(moved>=4){moved=0;return}S.floor=b.dataset.fl;S.focus=null;return render()}
+ if(b=c('[data-view]')){S.view=b.dataset.view;return render()}
+ if(b=c('[data-lay]')){const k=b.dataset.lay;S.layers[k]=S.layers[k]===false;try{localStorage.setItem('fa-layers',JSON.stringify(S.layers))}catch(_){}return render()}
+ if(b=c('[data-fix]')){const[rid,i]=b.dataset.fix.split(':');const r=REPORTS.find(x=>x.id===rid);r.defects[+i].fixed=!r.defects[+i].fixed;return render()}
+ if(t.id==='r-user'){S.role='user';return render()}
+ if(t.id==='r-admin'){S.role='admin';return render()}
+ if(b=c('[data-step]')){S.step=+b.dataset.step;return render()}
+ if(b=c('[data-tab]')){S.tab=b.dataset.tab;return render()}
+ if(t.id==='go2'){S.step=2;return render()}
+ if(t.id==='go3'||t.id==='back2'){S.step=t.id==='go3'?3:2;return render()}
+ if(b=c('[data-floor]')){S.floor=b.dataset.floor;return render()}
+ if(c('.iso polygon')){S.floor=c('.iso polygon').dataset.f;if(S.role==='user'&&S.step===2)return render()}
+ if(b=c('[data-nav]')){if(b.dataset.nav){S.floor=b.dataset.nav;render();scrollTo(0,0)}return}
+ if(b=c('[data-fill]')){fillFloor(b.dataset.fill);return render()}
+ if(b=c('[data-has]')){const r=rec(S.floor,b.dataset.has);r.has=b.dataset.v;if(r.has==='no'){r.qty='0'}return render()}
+ if(b=c('[data-ck]')){const[k,i]=b.dataset.ck.split(':');rec(S.floor,k).r[+i]=+b.dataset.v;return render()}
+ if(b=c('[data-sample]')){const k=b.dataset.sample;rec(S.floor,k).photos.push(ph(S.floor+' '+CK[k].n,['#3b6a8a','#6a4b8a','#4b7a5a'][rec(S.floor,k).photos.length%3]));return render()}
+ if(b=c('[data-del]')){const[k,i]=b.dataset.del.split(':');rec(S.floor,k).photos.splice(+i,1);return render()}
+ if(b=c('[data-lb]')){const[k,i]=b.dataset.lb.split(':');return lightbox(rec(S.floor,k).photos[+i])}
+ if(t.tagName==='IMG'&&t.dataset.src)return lightbox(t.dataset.src);
+ if(t.id==='submit'){submit();return}
+ if(t.id==='toAdmin'){S.role='admin';S.tab='rep';S.rep=S.submitted;return render()}
+ if(t.id==='again'){Object.keys(INSP).forEach(k=>delete INSP[k]);S.submitted=null;S.step=2;return render()}
+ if(b=c('[data-rep]')){S.rep=b.dataset.rep;S.toast='';return render()}
+ if(b=c('[data-act]')){const r=REPORTS.find(x=>x.id===S.rep)||REPORTS[0];r.status=b.dataset.act;r.comment=($('#cmt')||{}).value||'';S.toast='"'+r.status+'" 처리했습니다. 점검원에게 알림이 갑니다. (시연)';return render()}
+});
+document.addEventListener('change',async e=>{
+ const t=e.target;
+ if(t.id==='gps'){S.gps=t.checked;return render()}
+ if(t.id==='gap'){S.gap=+t.value;return render()}
+ if(t.id==='asg'){S.asg[S.floor]=t.value||null;return render()}
+ if(t.dataset.job){JOBS.find(x=>x.id==t.dataset.job).who=t.value||null;return render()}
+ if(t.id==='use'){S.use=t.value;return render()}
+ if(t.id==='fire2'){S.fire2=t.checked;return render()}
+ if(t.id==='stairs'){S.stairs=Math.max(1,Math.min(6,+t.value||1));return render()}
+ if(t.id==='ack'){S.ack=t.checked;return render()}
+ if(t.dataset.area){S.areas[t.dataset.area]=Math.max(0,+t.value||0);return render()}
+ if(t.dataset.qty){rec(S.floor,t.dataset.qty).qty=t.value;return render()}
+ if(t.dataset.note!==undefined&&t.tagName==='TEXTAREA'){rec(S.floor,t.dataset.note).note=t.value;return}
+ if(t.dataset.file){const k=t.dataset.file;for(const f of t.files){const d=await resizePhoto(f);if(d)rec(S.floor,k).photos.push(d)}render()}
+});
+function lightbox(src){const l=$('#lbx');l.innerHTML='<div class="lb" role="dialog" aria-label="사진 확대"><img src="'+src+'" alt="확대 사진"><button class="btn" id="lbc">닫기</button></div>';l.onclick=ev=>{if(ev.target.closest('.lb')&&(ev.target.id==='lbc'||ev.target.classList.contains('lb')))l.innerHTML=''}}
+function submit(){
+ const sm=summarize(),d=defects(sm),pc=FL.reduce((a,f)=>a+sm[f].items.reduce((b,x)=>b+(x.st==='na'?0:rec(f,x.it.k).photos.length),0),0);
+ const st={};FL.forEach(f=>st[f]=sm[f].state);
+ const n=new Date(),p=x=>String(x).padStart(2,'0');
+ const r={id:'R-2610-'+String(15+REPORTS.length).padStart(3,'0'),bld:'한빛아파트',insp:'이도윤',at:p(n.getMonth()+1)+'/'+p(n.getDate())+' '+p(n.getHours())+':'+p(n.getMinutes()),status:'접수',loc:'12 m · ±9 m',photoCount:pc,states:st,defects:d,comment:''};
+ REPORTS.unshift(r);S.submitted=r.id;render();
+}
+seedReports();render();
+})();
+</script>
+<script>if('serviceWorker' in navigator&&location.protocol.startsWith('http')){addEventListener('load',()=>navigator.serviceWorker.register('sw.js').catch(()=>{}))}</script>
+</body>
+</html>
