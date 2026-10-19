@@ -57,6 +57,7 @@ label.cb input{margin-top:5px;width:18px;height:18px;flex:none}
 .pill{display:inline-block;font:500 11px var(--mono);padding:2px 8px;border-radius:99px;white-space:nowrap}
 .p-ok{background:var(--green-soft);color:var(--green)}.p-warn{background:var(--amber-soft);color:var(--amber)}.p-bad{background:var(--red-soft);color:var(--red)}.p-no{background:var(--wire);color:var(--mute)}.p-blue{background:var(--blue-soft);color:var(--blue)}
 .btn{border:0;background:var(--ink);color:var(--bg);border-radius:9px;padding:10px 16px;font:700 14px var(--sans);cursor:pointer;min-height:42px}
+.btn.bad{background:var(--red);color:#fff;border:1px solid var(--red)}
 .btn.ghost{background:transparent;color:var(--ink);border:1px solid var(--line)}
 .btn.blue{background:var(--blue);color:#fff}
 .btn.sm{padding:6px 10px;min-height:34px;font-size:13px}
@@ -686,7 +687,7 @@ function aJob(){
  const ins=inspectors(),today_=today();
  const lock=j=>['진행 중','제출됨','승인','보완 요청'].includes(j.status);
  const col=(t,uid)=>{const js=A.jobs.filter(j=>(j.inspUid||null)===uid);const act=js.filter(j=>j.status!=='승인').length;
-  return'<div class="col"><h3 style="margin:0">'+esc(t)+' <span class="pill '+(uid?(act>3?'p-bad':'p-no'):'p-bad')+'">'+js.length+'</span></h3>'+js.map(j=>'<div class="tk"><b>'+esc(j.bldName)+'</b><div class="small">'+esc(j.date||'')+(j.note?' · '+esc(j.note):'')+'</div><div class="row"><span class="pill p-'+(jobCls[j.status]||'no')+'">'+esc(j.status)+'</span><span class="sp"></span><button class="btn ghost sm" data-jdel="'+esc(j.id)+'"'+(j.status==='승인'?' disabled':'')+' aria-label="작업 삭제">삭제</button></div><select data-job="'+esc(j.id)+'" aria-label="점검자 배정"'+(lock(j)?' disabled':'')+'><option value="">미배정</option>'+ins.map(u=>'<option value="'+esc(u.uid)+'"'+(j.inspUid===u.uid?' selected':'')+'>'+esc(u.name)+'</option>').join('')+'</select></div>').join('')+(js.length?'':'<div class="small">비어 있음</div>')+'</div>'};
+  return'<div class="col"><h3 style="margin:0">'+esc(t)+' <span class="pill '+(uid?(act>3?'p-bad':'p-no'):'p-bad')+'">'+js.length+'</span></h3>'+js.map(j=>'<div class="tk"><b>'+esc(j.bldName)+'</b><div class="small">'+esc(j.date||'')+(j.note?' · '+esc(j.note):'')+'</div><div class="row"><span class="pill p-'+(jobCls[j.status]||'no')+'">'+esc(j.status)+'</span><span class="sp"></span><button class="btn '+(ARM==='j:'+j.id?'bad':'ghost')+' sm" data-jdel="'+esc(j.id)+'"'+(j.status==='승인'?' disabled title="승인된 작업은 삭제할 수 없습니다"':'')+' aria-label="작업 삭제">'+(ARM==='j:'+j.id?'삭제 확인':'삭제')+'</button></div><select data-job="'+esc(j.id)+'" aria-label="점검자 배정"'+(lock(j)?' disabled':'')+'><option value="">미배정</option>'+ins.map(u=>'<option value="'+esc(u.uid)+'"'+(j.inspUid===u.uid?' selected':'')+'>'+esc(u.name)+'</option>').join('')+'</select></div>').join('')+(js.length?'':'<div class="small">비어 있음</div>')+'</div>'};
  let h='<div><div class="kick">ADMIN</div><h2>작업 분배</h2><p class="lead">건물을 골라 점검 작업을 만들고 점검자에게 배정합니다. 배정된 점검자의 "내 작업"에 바로 나타납니다. 진행 중인 작업은 재배정할 수 없습니다.</p></div>'+flash();
  if(!A.blds.length)h+='<div class="notice">등록된 건물이 없습니다. 먼저 "건물" 탭에서 건물을 등록하세요.</div>';
  else h+='<form class="card" id="fJob" style="display:grid;gap:12px"><h3 style="margin:0">새 작업</h3><div class="fgrid"><label class="fld"><span>건물</span><select name="bld" required>'+A.blds.map(b=>'<option value="'+esc(b.id)+'">'+esc(b.name)+'</option>').join('')+'</select></label><label class="fld"><span>점검 예정일</span><input type="date" name="date" value="'+today_+'" required></label><label class="fld"><span>점검자</span><select name="insp"><option value="">미배정</option>'+ins.map(u=>'<option value="'+esc(u.uid)+'">'+esc(u.name)+'</option>').join('')+'</select></label><label class="fld"><span>메모</span><input type="text" name="note" placeholder="예: 작동점검"></label></div><div class="row"><button class="btn blue" type="submit">작업 만들기</button>'+(ins.length?'':'<span class="small">점검자 계정이 없습니다. "사용자" 탭에서 만드세요.</span>')+'</div></form>';
@@ -816,7 +817,7 @@ function aBld(){
    '<div class="row"><button class="btn ghost sm" type="button" id="bfgeo">현재 위치를 건물 좌표로</button><button class="btn ghost sm" type="button" id="bfgc">주소로 좌표 찾기</button><span class="small">건물 앞에서 눌러 좌표를 채웁니다. 비워 두면 위치 제한이 없습니다.</span></div>'+
    '<div class="row"><button class="btn blue" type="submit">저장</button><button class="btn ghost" type="button" id="bfcancel">취소</button></div></form>';
  }else h+='<div class="row"><button class="btn blue" id="bldnew">+ 건물 등록</button></div>';
- h+=A.blds.length?'<div class="list">'+A.blds.map(b=>{const ow=A.users.find(u=>u.uid===b.ownerUid);return'<div class="card"><div class="row"><div><b>'+esc(b.name)+'</b><div class="small">'+esc(b.address||'-')+' · '+esc(b.use)+' · '+(b.floors||[]).length+'개 층 · 연면적 '+(b.floors||[]).reduce((a,x)=>a+(+b.areas[x]||0),0).toLocaleString()+'㎡ · 건물주 '+esc(ow?ow.name:'미지정')+' · '+(b.lat!=null&&b.lat!==''?'위치 설정됨 ('+(b.radius||100)+' m)':'위치 제한 없음')+'</div></div><span class="sp"></span><button class="btn ghost sm" data-bldedit="'+esc(b.id)+'">수정</button><button class="btn ghost sm" data-blddel="'+esc(b.id)+'">삭제</button></div></div>'}).join('')+'</div>':'<div class="notice blue">등록된 건물이 없습니다.</div>';
+ h+=A.blds.length?'<div class="list">'+A.blds.map(b=>{const ow=A.users.find(u=>u.uid===b.ownerUid);return'<div class="card"><div class="row"><div><b>'+esc(b.name)+'</b><div class="small">'+esc(b.address||'-')+' · '+esc(b.use)+' · '+(b.floors||[]).length+'개 층 · 연면적 '+(b.floors||[]).reduce((a,x)=>a+(+b.areas[x]||0),0).toLocaleString()+'㎡ · 건물주 '+esc(ow?ow.name:'미지정')+' · '+(b.lat!=null&&b.lat!==''?'위치 설정됨 ('+(b.radius||100)+' m)':'위치 제한 없음')+'</div></div><span class="sp"></span><button class="btn ghost sm" data-bldedit="'+esc(b.id)+'">수정</button><button class="btn '+(ARM==='b:'+b.id?'bad':'ghost')+' sm" data-blddel="'+esc(b.id)+'">'+(ARM==='b:'+b.id?'삭제 확인':'삭제')+'</button></div></div>'}).join('')+'</div>':'<div class="notice blue">등록된 건물이 없습니다.</div>';
  return h;
 }
 /* 사용자 */
@@ -869,6 +870,9 @@ function vOwner(){
 }
 
 /* ================= 동작 ================= */
+let ARM='',ARMT=0;
+/* confirm() 대신 화면 안 2단계 확인: 처음 누르면 '삭제 확인'으로 바뀌고, 5초 안에 한 번 더 누르면 실행 */
+function armed(key){if(ARM===key){clearTimeout(ARMT);ARM='';return true}ARM=key;clearTimeout(ARMT);ARMT=setTimeout(()=>{ARM='';render()},5000);render();return false}
 function setMsg(t,ok){S.msg=t||'';S.msgOk=!!ok}
 async function guard(fn){try{S.busy=true;await fn()}catch(e){setMsg(emsg(e),false)}finally{S.busy=false;render()}}
 async function resizePhoto(file,max,q){return new Promise(res=>{const fr=new FileReader();fr.onload=()=>reenc(fr.result,max,q).then(res);fr.onerror=()=>res(null);fr.readAsDataURL(file)})}
@@ -934,14 +938,14 @@ document.addEventListener('click',e=>{
   if(st==='보완 요청'&&!cm){setMsg('보완 요청은 사유를 입력해야 합니다.');return render()}
   return guard(async()=>{await D.update('reports',r.id,{status:st,comment:cm,reviewedAt:Date.now(),reviewedBy:A.user.name});await D.update('jobs',r.jobId,{status:st==='승인'?'승인':st==='보완 요청'?'보완 요청':'제출됨'});setMsg('"'+st+'" 처리했습니다.',true)})}
  if(b=c('[data-print]'))return window.print();
- if(b=c('[data-jdel]')){const id=b.dataset.jdel;if(!confirm('이 작업을 삭제할까요?'))return;return guard(async()=>{await D.del('jobs',id)})}
+ if(b=c('[data-jdel]')){const id=b.dataset.jdel;if(!armed('j:'+id))return;return guard(async()=>{await D.del('jobs',id)})}
  if(t.id==='bldnew'){S.bf=newBF();return render()}
  if(t.id==='bfcancel'){S.bf=null;S.lg=null;return render()}
  if(t.id==='lgsearch')return lgRun();
  if(b=c('[data-lgpick]'))return lgPick(b.dataset.lgpick);
  if(t.id==='bfgc'){const q=(S.bf.address||'').replace(/\s*\(.*\)\s*$/,'')||S.bf.name;if(!q){setMsg('주소를 먼저 입력하세요.');return render()}return guard(async()=>{const g=await geocode((S.bf.address.match(/\(([^)]+)\)/)||[])[1]||q);if(!g)throw new Error('좌표를 찾지 못했습니다. 건물 앞에서 현재 위치로 채우세요.');S.bf.lat=g.lat;S.bf.lng=g.lng;setMsg('지도 검색 좌표를 채웠습니다(근사). 건물 앞에서 현재 위치로 보정하세요.',true)})}
  if(b=c('[data-bldedit]')){const x=A.blds.find(y=>y.id===b.dataset.bldedit);if(x){S.bf=bfFrom(x);render()}return}
- if(b=c('[data-blddel]')){const id=b.dataset.blddel;if(!confirm('이 건물을 삭제할까요? 이미 만든 작업과 리포트는 남습니다.'))return;return guard(async()=>{await D.del('buildings',id)})}
+ if(b=c('[data-blddel]')){const id=b.dataset.blddel;if(!armed('b:'+id))return;return guard(async()=>{await D.del('buildings',id)})}
  if(t.id==='bfgeo'){if(!navigator.geolocation){setMsg('위치를 지원하지 않는 기기입니다.');return render()}navigator.geolocation.getCurrentPosition(p=>{S.bf.lat=p.coords.latitude.toFixed(6);S.bf.lng=p.coords.longitude.toFixed(6);setMsg('현재 위치를 좌표로 채웠습니다 (정확도 ±'+Math.round(p.coords.accuracy)+' m).',true);render()},()=>{setMsg('위치를 가져오지 못했습니다. 위치 권한을 확인하세요.');render()},{enableHighAccuracy:true,timeout:20000});return}
  if(b=c('[data-uact]')){const u=A.users.find(x=>x.uid===b.dataset.uact);if(!u)return;return guard(async()=>{await D.update('users',u.uid,{active:!u.active})})}
  /* 건물주 */
