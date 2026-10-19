@@ -697,12 +697,113 @@ function aJob(){
 /* 건물 */
 const mkFloors=(g,u)=>{const o=[];for(let i=g;i>=1;i--)o.push(i+'F');for(let i=1;i<=u;i++)o.push('B'+i);return o};
 function newBF(){return{id:'',name:'',address:'',use:'근린생활시설',fire2:true,stairs:2,ground:4,under:1,areas:{'4F':300,'3F':300,'2F':300,'1F':420,'B1':300},ownerUid:'',lat:'',lng:'',radius:100}}
+/* ================= 건축물대장 검색 (건물 등록 시 주소로 찾기) =================
+   데이터: ledger.b64 (근린생활·판매·업무·숙박·위락·문화집회·운동·의료·관광휴게 시설이 있는 대지). 처음 검색할 때만 내려받는다. */
+const LG=(()=>{
+ let G,U,E,R,FD=[],FUs=[],gS=[],gE=[],roadIdx=null,loading=null;
+ const useKey=m=>/근린생활|소매/.test(m)?'근린생활시설':/판매/.test(m)?'판매시설':/업무/.test(m)?'업무시설':/숙박/.test(m)?'숙박시설':/위락/.test(m)?'위락시설':/문화|집회/.test(m)?'공연장·집회시설':/의료/.test(m)?'의료시설':'그 밖의 용도';
+ const addr=r=>G[r[0]]+' '+(r[3]?'산':'')+r[1]+(r[2]?'-'+r[2]:'')+'번지';
+ const sgg=g=>G[g].split(' ').slice(0,-1).join(' ');
+ async function load(){
+  if(R)return;
+  if(!loading)loading=(async()=>{
+   if(typeof DecompressionStream==='undefined')throw new Error('이 브라우저는 압축 데이터를 풀 수 없습니다. 최신 Chrome·Edge·Safari에서 사용하세요.');
+   const r=await fetch('ledger.b64');if(!r.ok)throw new Error('건축물대장 데이터를 불러오지 못했습니다 (HTTP '+r.status+')');
+   const b64=(await r.text()).trim();const bin=Uint8Array.from(atob(b64),c=>c.charCodeAt(0));
+   const d=JSON.parse(await new Response(new Blob([bin]).stream().pipeThrough(new DecompressionStream('gzip'))).text());
+   G=d.g;U=d.u;E=d.e;FD=d.f||[];FUs=d.fu||[];R=d.r;
+   for(let i=0;i<R.length;i++){const g=R[i][0];if(gS[g]===undefined)gS[g]=i;gE[g]=i+1}
+  })().catch(e=>{loading=null;throw e});
+  return loading;
+ }
+ function buildRoadIdx(){if(roadIdx)return;roadIdx=new Map();
+  for(let i=0;i<R.length;i++){const rd=R[i][4];if(!rd)continue;const nm=rd.split(' ')[0];let a=roadIdx.get(nm);if(!a)roadIdx.set(nm,a=[]);a.push(i)}}
+ function parseQ(q){
+  const toks=q.trim().replace(/\s+/g,' ').split(' ').filter(Boolean);let lot=null,rest=toks;
+  if(toks.length){const m=toks[toks.length-1].match(/^(산)?(\d+)(?:-(\d+))?(?:번지|번)?$/);
+   if(m){lot={san:m[1]?1:0,bun:+m[2],ji:+(m[3]||0)};rest=toks.slice(0,-1)}}
+  if(rest.length&&rest[rest.length-1]==='산'){if(lot)lot.san=1;rest=rest.slice(0,-1)}
+  return{lot,rest,raw:q.trim()};
+ }
+ const isRoad=t=>/(로|길)(\d+(번길)?)?$/.test(t)&&t.length>=2;
+ const isDong=t=>/(동|읍|면|리|가)$/.test(t)&&t.length>=2&&!isRoad(t);
+ const label=(dBun,dJi,exact)=>exact?'입력과 일치':dBun===0?'같은 본번, 부번 '+dJi+' 차이':'본번 '+dBun+' 차이';
+ function search(q){
+  const p=parseQ(q),out=[];
+  const road=p.rest.find(isRoad),dong=p.rest.find(isDong);
+  const regs=p.rest.filter(t=>t!==road&&t!==dong);
+  const gOK=(g,toks)=>toks.every(t=>G[g].includes(t));
+  if(road&&p.lot){buildRoadIdx();const list=roadIdx.get(road)||[];const by=new Map();
+   for(const i of list){const g=R[i][0];if(!gOK(g,regs))continue;const k=sgg(g);let a=by.get(k);if(!a)by.set(k,a=[]);a.push(i)}
+   for(const [k,arr] of by){const c=arr.map(i=>{const t=R[i][4].split(' ')[1]||'',m=t.match(/^(\d+)(?:-(\d+))?/),mb=m?+m[1]:0,mj=m?+(m[2]||0):0;
+     const db=Math.abs(mb-p.lot.bun),dj=Math.abs(mj-p.lot.ji);return{i,d:db*100000+dj,l:label(db,dj,db===0&&dj===0)}}).sort((a,b)=>a.d-b.d).slice(0,6);
+    out.push({name:k+' '+road,count:arr.length,c})}
+  }else if(dong){let gs=[];for(let g=0;g<G.length;g++){if(G[g].split(' ').includes(dong)&&gOK(g,regs))gs.push(g)}
+   if(!gs.length)for(let g=0;g<G.length;g++){if(G[g].includes(dong)&&gOK(g,regs))gs.push(g)}
+   for(const g of gs){const n=gE[g]-gS[g];let c=[];
+    if(p.lot){for(let i=gS[g];i<gE[g];i++){const r=R[i];const db=Math.abs(r[1]-p.lot.bun),dj=Math.abs(r[2]-p.lot.ji);
+      c.push({i,d:(r[3]!==p.lot.san?1e9:0)+db*100000+dj,l:label(db,dj,db===0&&dj===0&&r[3]===p.lot.san)})}
+     c.sort((a,b)=>a.d-b.d);c=c.slice(0,6)}
+    else{for(let i=gS[g];i<Math.min(gE[g],gS[g]+8);i++)c.push({i,d:0,l:'동 내 목록'})}
+    out.push({name:G[g],count:n,c})}
+  }else{const qq=p.raw.replace(/\s+/g,'');const c=[];
+   for(let i=0;i<R.length&&c.length<30;i++){const r=R[i];const f=FD[i];const nm=(f&&f[3]&&f[3][0]&&f[3][0][0])||r[5];if(nm&&nm.replace(/\s+/g,'').includes(qq))c.push({i,d:0,l:'건물명 일치'})}
+   if(c.length)out.push({name:'건물명 검색',count:c.length,c})}
+  out.sort((a,b)=>(a.c[0]?a.c[0].d:9e12)-(b.c[0]?b.c[0].d:9e12)||b.count-a.count);
+  return out.slice(0,5);
+ }
+ const bldOf=i=>{const f=FD[i];if(!f||!f[3]||!f[3].length)return null;return f[3].find(x=>x[1]>0)||f[3][0]};
+ function brief(i){const r=R[i],b=bldOf(i);const nm=(b&&b[0])||r[5]||'(이름 없음)';
+  return{i,name:nm,addr:addr(r),road:r[4]?sgg(r[0])+' '+r[4]:'',use:U[r[6]],up:b&&b[1]>0?b[1]:null,dn:b?b[2]:0,gfa:b&&b[3]?b[3]:0}}
+ function fill(i){
+  const r=R[i],b=bldOf(i),up=b&&b[1]>0?b[1]:null,dn=b?b[2]:0;
+  const ground=up?Math.min(30,up):null,under=Math.min(5,dn||0);
+  let gfa=b&&b[3]?b[3]:(r[10]?Math.round(r[10]/Math.max(r[11],1)):0);
+  return{name:(b&&b[0])||r[5]||'',address:addr(r)+(r[4]?' ('+sgg(r[0])+' '+r[4]+')':''),use:useKey(U[r[6]]+','+E[r[7]]),ground,under,gfa,
+   geoQ:r[4]?sgg(r[0])+' '+r[4]:G[r[0]]+' '+r[1]+(r[2]?'-'+r[2]:'')};
+ }
+ return{load,search,brief,fill,ready:()=>!!R};
+})();
+async function geocode(q){
+ const r=await fetch('https://nominatim.openstreetmap.org/search?format=json&limit=1&countrycodes=kr&accept-language=ko&q='+encodeURIComponent(q));
+ if(!r.ok)throw new Error('좌표 서버 응답 오류 (HTTP '+r.status+')');
+ const a=await r.json();if(!a.length)return null;return{lat:(+a[0].lat).toFixed(6),lng:(+a[0].lon).toFixed(6)};
+}
+function lgBox(){
+ const L=S.lg||{q:''};
+ let h='<div class="card" style="display:grid;gap:8px"><h3 style="margin:0">건축물대장에서 찾기</h3><div class="small">도로명+번지(예: 판교역로 235), 동+지번(예: 정자동 178-1), 또는 건물명으로 찾아 선택하면 건물 이름·주소·주 용도·층수·층별 면적이 채워집니다. 같은 동 이름이 여러 곳이면 시·구를 앞에 쓰세요(예: 성남시 분당구 정자동 178-1). 건물주 계정은 대장에 없으므로 아래에서 직접 선택하세요.</div>'+
+  '<div class="row"><input type="text" id="lgq" data-lgq style="flex:1;min-width:180px" placeholder="주소 또는 건물명" value="'+esc(L.q)+'"><button class="btn blue sm" type="button" id="lgsearch"'+(L.busy?' disabled':'')+'>'+(L.busy?'찾는 중…':'찾기')+'</button></div>';
+ if(L.err)h+='<div class="msg">'+esc(L.err)+'</div>';
+ if(L.res){
+  if(!L.res.length)h+='<div class="small">결과가 없습니다. 대장 데이터에는 근린생활·판매·업무·숙박·위락·문화집회·운동·의료·관광휴게 시설이 있는 대지만 들어 있습니다. 그 밖의 건물은 아래 칸에 직접 입력하세요.</div>';
+  L.res.forEach(g=>{h+='<div><div class="small" style="font-weight:700;margin:4px 0">'+esc(g.name)+' <span style="font-weight:400">('+g.count+'곳)</span></div><div style="display:grid;gap:6px">'+
+   g.c.map(c=>{const b=LG.brief(c.i);return'<button type="button" class="btn ghost" data-lgpick="'+c.i+'" style="text-align:left;display:block;height:auto;padding:8px 10px"><b>'+esc(b.name)+'</b> <span class="small">· '+esc(c.l)+'</span><br><span class="small">'+esc(b.addr)+(b.road?' · '+esc(b.road):'')+'<br>'+esc(b.use)+(b.up?' · 지상 '+b.up+'층'+(b.dn?' / 지하 '+b.dn+'층':''):' · 층수 미확인')+(b.gfa?' · 연면적 '+Math.round(b.gfa).toLocaleString('ko-KR')+'㎡':'')+'</span></button>'}).join('')+'</div></div>'});
+ }
+ return h+'</div>';
+}
+async function lgRun(){
+ const L=S.lg||(S.lg={q:''});const q=(L.q||'').trim();if(!q){L.err='주소나 건물명을 입력하세요.';return render()}
+ L.busy=true;L.err='';L.res=null;render();
+ try{await LG.load();L.res=LG.search(q)}catch(e){L.err=e.message||String(e)}
+ L.busy=false;render();
+}
+async function lgPick(i){
+ const f=LG.fill(+i),b=S.bf;if(!b)return;
+ b.name=f.name||b.name;b.address=f.address;b.use=f.use;
+ let note='';
+ if(f.ground){b.ground=f.ground;b.under=f.under;const fl=mkFloors(f.ground,f.under);b.areas={};const each=f.gfa?Math.max(10,Math.round(f.gfa/fl.length/10)*10):300;fl.forEach(x=>b.areas[x]=each);
+  note='층별 바닥면적은 연면적('+Math.round(f.gfa).toLocaleString('ko-KR')+'㎡)을 층수로 나눈 추정값이니 도면과 대조해 고치세요. '}
+ else note='이 대지는 층수 정보가 없어 층수·면적은 그대로 두었습니다. 직접 입력하세요. ';
+ S.lg=null;setMsg('건축물대장에서 불러왔습니다. '+note,true);render();
+ try{const g=await geocode(f.geoQ);if(g&&S.bf===b){b.lat=g.lat;b.lng=g.lng;setMsg('건축물대장에서 불러왔습니다. '+note+'좌표는 지도 검색값(근사)이니 건물 앞에서 "현재 위치를 건물 좌표로"로 보정하세요.',true);render()}}catch(_){}
+}
 function bfFrom(b){const g=(b.floors||[]).filter(f=>!isUnder(f)).length,u=(b.floors||[]).filter(isUnder).length;return Object.assign({},clone(b),{ground:g,under:u,lat:b.lat==null?'':b.lat,lng:b.lng==null?'':b.lng,radius:b.radius||100})}
 function aBld(){
  let h='<div><div class="kick">ADMIN</div><h2>건물 관리</h2><p class="lead">점검 대상 건물과 층별 면적, 용도를 등록합니다. 이 값으로 층별 필수 비치물품이 산출됩니다. 위치(좌표)를 넣으면 현장 반경 안에서만 점검 입력이 열립니다. 수정은 이후에 만드는 작업부터 적용됩니다.</p></div>'+flash();
  const f=S.bf;
  if(f){
   const fl=mkFloors(+f.ground||0,+f.under||0);
+  h+=lgBox();
   h+='<form class="card" id="fBld" style="display:grid;gap:12px"><h3 style="margin:0">'+(f.id?'건물 수정':'건물 등록')+'</h3><div class="fgrid">'+
    '<label class="fld"><span>건물 이름</span><input type="text" data-bf="name" value="'+esc(f.name)+'" required></label><label class="fld"><span>주소</span><input type="text" data-bf="address" value="'+esc(f.address)+'"></label>'+
    '<label class="fld"><span>주 용도</span><select data-bf="use">'+Object.keys(USES).map(u=>'<option'+(u===f.use?' selected':'')+'>'+u+'</option>').join('')+'</select></label>'+
@@ -712,7 +813,7 @@ function aBld(){
    '<label class="cb"><input type="checkbox" data-bfc="fire2"'+(f.fire2?' checked':'')+'><span>주요구조부 내화구조이고 벽·반자 마감이 불연·준불연·난연 재료 (소화기 면적 기준 2배 적용)</span></label>'+
    '<div><div class="small" style="margin-bottom:6px">층별 바닥면적 (㎡)</div><div class="row">'+fl.map(x=>'<label class="fld" style="width:96px"><span style="font-family:var(--mono)">'+x+'</span><input type="number" min="0" step="10" data-bfa="'+x+'" value="'+esc(f.areas[x]==null?300:f.areas[x])+'"></label>').join('')+'</div></div>'+
    '<div class="fgrid"><label class="fld"><span>위도</span><input type="text" data-bf="lat" value="'+esc(f.lat)+'" inputmode="decimal" placeholder="예: 37.4012"></label><label class="fld"><span>경도</span><input type="text" data-bf="lng" value="'+esc(f.lng)+'" inputmode="decimal" placeholder="예: 127.1087"></label><label class="fld"><span>점검 허용 반경 (m)</span><input type="number" min="20" max="1000" data-bf="radius" value="'+esc(f.radius)+'"></label></div>'+
-   '<div class="row"><button class="btn ghost sm" type="button" id="bfgeo">현재 위치를 건물 좌표로</button><span class="small">건물 앞에서 눌러 좌표를 채웁니다. 비워 두면 위치 제한이 없습니다.</span></div>'+
+   '<div class="row"><button class="btn ghost sm" type="button" id="bfgeo">현재 위치를 건물 좌표로</button><button class="btn ghost sm" type="button" id="bfgc">주소로 좌표 찾기</button><span class="small">건물 앞에서 눌러 좌표를 채웁니다. 비워 두면 위치 제한이 없습니다.</span></div>'+
    '<div class="row"><button class="btn blue" type="submit">저장</button><button class="btn ghost" type="button" id="bfcancel">취소</button></div></form>';
  }else h+='<div class="row"><button class="btn blue" id="bldnew">+ 건물 등록</button></div>';
  h+=A.blds.length?'<div class="list">'+A.blds.map(b=>{const ow=A.users.find(u=>u.uid===b.ownerUid);return'<div class="card"><div class="row"><div><b>'+esc(b.name)+'</b><div class="small">'+esc(b.address||'-')+' · '+esc(b.use)+' · '+(b.floors||[]).length+'개 층 · 연면적 '+(b.floors||[]).reduce((a,x)=>a+(+b.areas[x]||0),0).toLocaleString()+'㎡ · 건물주 '+esc(ow?ow.name:'미지정')+' · '+(b.lat!=null&&b.lat!==''?'위치 설정됨 ('+(b.radius||100)+' m)':'위치 제한 없음')+'</div></div><span class="sp"></span><button class="btn ghost sm" data-bldedit="'+esc(b.id)+'">수정</button><button class="btn ghost sm" data-blddel="'+esc(b.id)+'">삭제</button></div></div>'}).join('')+'</div>':'<div class="notice blue">등록된 건물이 없습니다.</div>';
@@ -835,7 +936,10 @@ document.addEventListener('click',e=>{
  if(b=c('[data-print]'))return window.print();
  if(b=c('[data-jdel]')){const id=b.dataset.jdel;if(!confirm('이 작업을 삭제할까요?'))return;return guard(async()=>{await D.del('jobs',id)})}
  if(t.id==='bldnew'){S.bf=newBF();return render()}
- if(t.id==='bfcancel'){S.bf=null;return render()}
+ if(t.id==='bfcancel'){S.bf=null;S.lg=null;return render()}
+ if(t.id==='lgsearch')return lgRun();
+ if(b=c('[data-lgpick]'))return lgPick(b.dataset.lgpick);
+ if(t.id==='bfgc'){const q=(S.bf.address||'').replace(/\s*\(.*\)\s*$/,'')||S.bf.name;if(!q){setMsg('주소를 먼저 입력하세요.');return render()}return guard(async()=>{const g=await geocode((S.bf.address.match(/\(([^)]+)\)/)||[])[1]||q);if(!g)throw new Error('좌표를 찾지 못했습니다. 건물 앞에서 현재 위치로 채우세요.');S.bf.lat=g.lat;S.bf.lng=g.lng;setMsg('지도 검색 좌표를 채웠습니다(근사). 건물 앞에서 현재 위치로 보정하세요.',true)})}
  if(b=c('[data-bldedit]')){const x=A.blds.find(y=>y.id===b.dataset.bldedit);if(x){S.bf=bfFrom(x);render()}return}
  if(b=c('[data-blddel]')){const id=b.dataset.blddel;if(!confirm('이 건물을 삭제할까요? 이미 만든 작업과 리포트는 남습니다.'))return;return guard(async()=>{await D.del('buildings',id)})}
  if(t.id==='bfgeo'){if(!navigator.geolocation){setMsg('위치를 지원하지 않는 기기입니다.');return render()}navigator.geolocation.getCurrentPosition(p=>{S.bf.lat=p.coords.latitude.toFixed(6);S.bf.lng=p.coords.longitude.toFixed(6);setMsg('현재 위치를 좌표로 채웠습니다 (정확도 ±'+Math.round(p.coords.accuracy)+' m).',true);render()},()=>{setMsg('위치를 가져오지 못했습니다. 위치 권한을 확인하세요.');render()},{enableHighAccuracy:true,timeout:20000});return}
@@ -886,8 +990,10 @@ document.addEventListener('submit',async e=>{
   return guard(async()=>{await D.set('jobs',j.id,j);setMsg('작업을 만들었습니다.',true)});
  }
 });
+document.addEventListener('keydown',e=>{if(e.key==='Enter'&&e.target.dataset&&e.target.dataset.lgq!==undefined){e.preventDefault();lgRun()}});
 document.addEventListener('input',e=>{
  const t=e.target;
+ if(t.dataset.lgq!==undefined){(S.lg||(S.lg={})).q=t.value;return}
  if(t.dataset.bf!==undefined&&S.bf){S.bf[t.dataset.bf]=t.value;return}
  if(t.dataset.bfa!==undefined&&S.bf){S.bf.areas[t.dataset.bfa]=t.value;return}
  if(t.dataset.note!==undefined&&t.tagName==='TEXTAREA'){rec(S.floor,t.dataset.note).note=t.value;persist()}
