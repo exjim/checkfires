@@ -30,31 +30,105 @@ service cloud.firestore {
       allow update, delete: if isAdmin();
     }
 
+    // 건물: 관리자는 전체, 건물주는 자기 건물만(점검자는 작업 안에 건물 정보가 들어 있어 따로 읽지 않음)
     match /buildings/{id} {
-      allow read: if role() != '';
+      allow read: if isAdmin()
+        || (role() == 'owner' && resource.data.ownerUid == request.auth.uid);
       allow write: if isAdmin();
     }
 
+    function jobOf(jid) { return get(/databases/$(database)/documents/jobs/$(jid)).data; }
+
+    // 작업 — 상태 흐름: 미배정 → 배정 → 수락 → 진행 중 → 제출됨 → (승인 | 보완 요청 → 제출됨)
     match /jobs/{id} {
       allow read: if isAdmin()
         || (role() == 'inspector' && resource.data.inspUid == request.auth.uid);
       allow create, delete: if isAdmin();
-      allow update: if isAdmin()
-        || (role() == 'inspector' && resource.data.inspUid == request.auth.uid);
+      allow update: if adminJobUpdate() || inspectorJobUpdate();
+
+      // 관리자: 점검이 시작된 작업의 점검자는 바꿀 수 없음
+      function adminJobUpdate() {
+        return isAdmin()
+          && (request.resource.data.inspUid == resource.data.inspUid
+              || resource.data.status in ['미배정', '배정', '수락']);
+      }
+      // 점검자: 본인 작업만, 제출·승인된 작업은 잠김, 허용된 필드와 상태 전이만
+      function inspectorJobUpdate() {
+        return role() == 'inspector'
+          && resource.data.inspUid == request.auth.uid
+          && resource.data.status in ['배정', '수락', '진행 중', '보완 요청']
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(
+               ['status', 'startedAt', 'acceptedAt', 'progress', 'insp', 'reportId', 'submittedAt',
+                'inspUid', 'inspName', 'declinedBy', 'declinedAt'])
+          && (
+            // 상태 변경 없이 진행값만 저장 (수락 전에는 불가)
+            (request.resource.data.status == resource.data.status
+              && resource.data.status != '배정'
+              && request.resource.data.inspUid == resource.data.inspUid)
+            // 수락
+            || (resource.data.status == '배정' && request.resource.data.status == '수락'
+              && request.resource.data.inspUid == resource.data.inspUid)
+            // 거절: 미배정으로 되돌리고 점검자 해제
+            || (resource.data.status == '배정' && request.resource.data.status == '미배정'
+              && request.resource.data.inspUid == '')
+            // 점검 시작
+            || (resource.data.status == '수락' && request.resource.data.status == '진행 중'
+              && request.resource.data.inspUid == resource.data.inspUid)
+            // 제출
+            || (resource.data.status in ['수락', '진행 중', '보완 요청']
+              && request.resource.data.status == '제출됨'
+              && request.resource.data.inspUid == resource.data.inspUid)
+          );
+      }
     }
 
+    // 리포트 — 접수 → 확인 중 → (승인 | 보완 요청). 승인 후에는 관리자도 수정 불가.
     match /reports/{id} {
       allow read: if isAdmin()
         || (role() == 'inspector' && resource.data.inspUid == request.auth.uid)
         || (role() == 'owner' && resource.data.ownerUid == request.auth.uid
             && resource.data.status == '승인');
+
+      // 제출: 본인에게 배정되어 시작한 작업에 대해서만, 접수 상태로, 건물주 정보는 작업과 같아야 함
       allow create: if role() == 'inspector'
-        && request.resource.data.inspUid == request.auth.uid;
-      allow update: if isAdmin()
-        || (role() == 'owner' && resource.data.ownerUid == request.auth.uid
-            && resource.data.status == '승인'
-            && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['fixes']));
+        && request.resource.data.inspUid == request.auth.uid
+        && request.resource.data.status == '접수'
+        && jobOf(request.resource.data.jobId).inspUid == request.auth.uid
+        && jobOf(request.resource.data.jobId).status in ['수락', '진행 중', '보완 요청']
+        && request.resource.data.ownerUid == jobOf(request.resource.data.jobId).ownerUid;
+
+      allow update: if adminReview() || inspectorResubmit() || ownerFix();
       allow delete: if isAdmin();
+
+      // 관리자: 허용된 상태 전이만, 보완 요청은 사유 필수
+      function adminReview() {
+        return isAdmin()
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(
+               ['status', 'comment', 'reviewedAt', 'reviewedBy'])
+          && ((resource.data.status == '접수'
+                 && request.resource.data.status in ['확인 중', '보완 요청', '승인'])
+              || (resource.data.status == '확인 중'
+                 && request.resource.data.status in ['보완 요청', '승인']))
+          && (request.resource.data.status != '보완 요청'
+              || (request.resource.data.comment is string && request.resource.data.comment.size() > 0));
+      }
+      // 점검자: 보완 요청을 받은 본인 리포트만 수정본으로 다시 제출(접수로 되돌림)
+      function inspectorResubmit() {
+        return role() == 'inspector'
+          && resource.data.inspUid == request.auth.uid
+          && resource.data.status == '보완 요청'
+          && request.resource.data.status == '접수'
+          && request.resource.data.inspUid == resource.data.inspUid
+          && request.resource.data.jobId == resource.data.jobId
+          && request.resource.data.ownerUid == resource.data.ownerUid;
+      }
+      // 건물주: 자기 건물의 승인된 리포트에서 조치 표시(fixes)만
+      // (조치 내용 필수 여부는 화면에서 확인합니다. 규칙은 필드 범위만 제한)
+      function ownerFix() {
+        return role() == 'owner' && resource.data.ownerUid == request.auth.uid
+          && resource.data.status == '승인'
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['fixes']);
+      }
     }
   }
 }
