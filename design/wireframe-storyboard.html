@@ -1,0 +1,734 @@
+<!doctype html>
+<html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light}body{margin:0}img{max-width:100%}[hidden]{display:none!important}</style>
+<title>소방점검 앱인앱 와이어프레임</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700;900&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: 상단 고정 목차 / 1~5 구조·권한·규칙·흐름·화면 와이어프레임 / 6 소방시설 배치 검토(건축물대장 → 도면·목록, 실제 동작) / 7 데이터 연결 */
+:root{--bg:#f6f7f9;--surface:#fff;--ink:#23262b;--mute:#6a7078;--line:#dfe3e8;--blue:#286ef0;--blue-soft:#e8f0fe;--red:#f22828;--red-soft:#fdecec;--amber:#b7791f;--amber-soft:#fdf3dc;--green:#1a8a5a;--green-soft:#e2f5ec;--wire:#e9ecf0;--wire-line:#b9c0c9;
+--alarm:#c2410c;--water:#1d4ed8;--exit:#15803d;--ok:#157347;--warn:#a15c00;--bad:#c62828;--na:#6b7686;--okbg:#e3f4ea;--warnbg:#fdf0d5;--badbg:#fde6e6;--nabg:#eceff3;
+--sans:'Noto Sans KR',system-ui,sans-serif;--mono:'IBM Plex Mono',ui-monospace,monospace}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#14171b;--surface:#1c2025;--ink:#e8eaee;--mute:#9aa1ab;--line:#2f353c;--blue:#6b9bff;--blue-soft:#1d2a47;--red:#ff6b6b;--red-soft:#3a2023;--amber:#e6b758;--amber-soft:#3a3120;--green:#4cc38a;--green-soft:#1b3328;--wire:#262b31;--wire-line:#4a525c;--alarm:#ff9a62;--water:#7ba5ff;--exit:#5fd08a;--ok:#5fd08a;--warn:#f0b04a;--bad:#ff7b7b;--na:#8e9aac;--okbg:#15301f;--warnbg:#35280e;--badbg:#3a1a1a;--nabg:#222c39;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#14171b;--surface:#1c2025;--ink:#e8eaee;--mute:#9aa1ab;--line:#2f353c;--blue:#6b9bff;--blue-soft:#1d2a47;--red:#ff6b6b;--red-soft:#3a2023;--amber:#e6b758;--amber-soft:#3a3120;--green:#4cc38a;--green-soft:#1b3328;--wire:#262b31;--wire-line:#4a525c;--alarm:#ff9a62;--water:#7ba5ff;--exit:#5fd08a;--ok:#5fd08a;--warn:#f0b04a;--bad:#ff7b7b;--na:#8e9aac;--okbg:#15301f;--warnbg:#35280e;--badbg:#3a1a1a;--nabg:#222c39;color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--sans);font-size:15px;line-height:1.65;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.wrap{max-width:1120px;margin-inline:auto}
+header.top{padding-block:28px 12px}
+header.top .kicker{font:500 12px var(--mono);letter-spacing:.08em;color:var(--mute);text-transform:uppercase}
+header.top h1{font-size:clamp(24px,4vw,34px);line-height:1.25;margin:6px 0 8px;text-wrap:balance;font-weight:900}
+header.top p{color:var(--mute);margin:0;max-width:70ch}
+section.pane{padding-block:28px 56px;scroll-margin-top:60px}
+h2{font-size:22px;margin:0 0 6px;font-weight:900;text-wrap:balance}
+h3{font-size:16px;margin:28px 0 10px;font-weight:700}
+.lead{color:var(--mute);max-width:72ch;margin:0 0 20px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:16px;min-width:0}
+.card h4{margin:0 0 6px;font-size:14px}
+.card p,.card li{font-size:14px;margin:0 0 6px}
+.card ul{margin:0;padding-left:18px}
+.tw{overflow-x:auto;border:1px solid var(--line);border-radius:10px;background:var(--surface)}
+table{border-collapse:collapse;width:100%;font-size:13.5px}
+th,td{text-align:left;padding:10px 12px;border-bottom:1px solid var(--line);vertical-align:top}
+th{font:500 11px var(--mono);letter-spacing:.06em;text-transform:uppercase;color:var(--mute);background:var(--bg)}
+tr:last-child td{border-bottom:0}
+code,.mono{font-family:var(--mono);font-size:12.5px}
+.callout{border-left:3px solid var(--blue);background:var(--blue-soft);padding:12px 14px;border-radius:0 8px 8px 0;margin:16px 0;font-size:14px}
+.callout.amb{border-color:var(--amber);background:var(--amber-soft)}
+.tree{display:grid;gap:14px}
+.tr-root{background:var(--ink);color:var(--bg);border-radius:10px;padding:12px 16px;font-weight:700}
+.tr-root small{font-weight:400;opacity:.8;display:block;font-size:12.5px}
+.tr-cols{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:12px}
+.tr-col{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:12px;min-width:0}
+.tr-col h4{margin:0 0 8px;font-size:14px}
+.tr-col ul{list-style:none;margin:0;padding:0;display:grid;gap:5px}
+.tr-col li{font-size:13px;display:flex;justify-content:space-between;gap:6px;border-top:1px dashed var(--line);padding-top:5px}
+.tr-col li.new{background:var(--blue-soft);border-radius:4px;padding:5px 6px}
+.id{font:500 10.5px var(--mono);color:var(--mute);margin-right:5px}
+.r1,.r2,.r3{display:inline-block;width:9px;height:9px;border-radius:50%;margin-left:3px;vertical-align:middle}
+.r1{background:var(--blue)}.r2{background:var(--amber)}.r3{background:var(--green)}
+.legend{display:flex;gap:16px;flex-wrap:wrap;font-size:13px;color:var(--mute);margin:8px 0 0}
+.nav2{position:sticky;top:env(safe-area-inset-top,0px);z-index:20;background:var(--bg);display:flex;gap:4px;overflow-x:auto;border-bottom:1px solid var(--line);padding:8px max(16px,env(safe-area-inset-left,0px));margin-inline:calc(-1*max(16px,env(safe-area-inset-left,0px)))}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:30;background:var(--bg)}
+.nav2 a{flex:none;color:var(--mute);text-decoration:none;font:500 14px var(--sans);padding:8px 13px;border-radius:8px}
+.nav2 a:hover,.nav2 a:focus-visible{background:var(--ink);color:var(--bg);outline:none}
+.nav2 a.hot{color:var(--blue)}
+.flowrow{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin:6px 0 14px}
+.flowrow span{background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:5px 10px;font-size:13px}
+.flowrow span.new{border-color:var(--blue);background:var(--blue-soft)}
+.flowrow i{font-style:normal;color:var(--mute)}
+.states{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px}
+/* wireframes */
+.wf-group{margin-top:26px}
+.wf-row{display:flex;gap:16px;overflow-x:auto;padding-bottom:10px;align-items:flex-start}
+.wf{flex:none;width:210px}
+.wf .phone{width:210px;height:380px;border:2px solid var(--wire-line);border-radius:20px;background:var(--surface);padding:10px;display:flex;flex-direction:column;gap:7px;overflow:hidden;font-size:10.5px}
+.wf.new .phone{border-color:var(--blue)}
+.wf .cap{margin-top:8px;font-size:12px;line-height:1.5}
+.wf .cap b{display:block;font-size:12.5px}
+.wf .meta{display:flex;flex-wrap:wrap;gap:4px;margin:4px 0}
+.wf .cap p{margin:2px 0;font-size:11.5px;color:var(--mute)}
+.wf .cap p b{display:inline;font-size:11.5px;color:var(--ink)}
+.w-bar{display:flex;justify-content:space-between;font-weight:700;font-size:11px;padding-bottom:5px;border-bottom:1px solid var(--wire-line)}
+.w-in{border:1px solid var(--wire-line);border-radius:4px;padding:6px 7px;color:var(--mute);background:var(--bg)}
+.w-btn{background:var(--ink);color:var(--bg);text-align:center;border-radius:4px;padding:7px;font-weight:700;margin-top:auto}
+.w-btn.ghost{background:transparent;color:var(--ink);border:1px solid var(--wire-line);margin-top:0}
+.w-box{background:var(--wire);border:1px dashed var(--wire-line);border-radius:4px;display:flex;align-items:center;justify-content:center;color:var(--mute);min-height:54px;text-align:center;padding:4px}
+.w-t{font-weight:700}.w-s{color:var(--mute)}
+.w-li{display:flex;justify-content:space-between;border:1px solid var(--wire-line);border-radius:4px;padding:6px 7px}
+.w-tabs{display:flex;gap:10px;border-bottom:1px solid var(--wire-line);padding-bottom:4px}.w-tabs span.on{color:var(--blue);font-weight:700;border-bottom:2px solid var(--blue)}
+.w-chk{display:flex;gap:6px;align-items:center;border:1px solid var(--wire-line);border-radius:4px;padding:5px 6px}.w-chk i{width:11px;height:11px;border:1.5px solid var(--wire-line);border-radius:3px;flex:none}.w-chk i.on{background:var(--blue);border-color:var(--blue)}
+.w-warn{border:1px solid var(--red);color:var(--red);border-radius:4px;padding:4px 6px;background:var(--red-soft)}
+.host{display:flex;justify-content:space-between;font-size:9.5px;color:var(--mute);background:var(--wire);border-radius:4px;padding:3px 6px}
+.w-tab{display:flex;justify-content:space-around;border-top:1px solid var(--wire-line);padding-top:6px;margin-top:auto;font-size:9.5px;color:var(--mute)}
+.w-tab b{font-weight:400}.w-tab b.on{color:var(--blue);font-weight:700}
+.w-kpi{display:grid;grid-template-columns:1fr 1fr;gap:5px}.w-kpi div{border:1px solid var(--wire-line);border-radius:4px;padding:5px 6px}.w-kpi b{display:block;font-size:15px}
+.w-prog{height:5px;background:var(--wire);border-radius:3px;overflow:hidden}.w-prog i{display:block;height:100%;background:var(--blue)}
+.w-sig{border:1px dashed var(--wire-line);border-radius:4px;height:70px;display:grid;place-items:center;color:var(--mute)}
+.w-seg{display:flex;border:1px solid var(--wire-line);border-radius:4px;overflow:hidden}.w-seg span{flex:1;text-align:center;padding:4px 0;color:var(--mute)}.w-seg span.on{background:var(--ink);color:var(--bg)}
+.w-off{background:var(--ink);color:var(--bg);text-align:center;border-radius:3px;padding:3px}
+.w-plan{border:1px solid var(--wire-line);border-radius:4px;background:var(--bg);padding:3px}
+.w-plan svg{display:block;width:100%;height:auto}
+
+/* ===== 6. 소방시설 배치 검토 (실동작) ===== */
+.rv .panel{background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:14px}
+.rv .top2{display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between;margin-bottom:12px}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:6px;overflow:hidden;background:var(--surface)}
+.seg button{border:0;background:transparent;color:var(--mute);padding:7px 14px;font:inherit;font-size:13.5px;font-weight:500;cursor:pointer}
+.seg button[aria-pressed="true"]{background:var(--blue);color:#fff}
+.rv button:focus-visible,.rv input:focus-visible,.rv select:focus-visible,.rv .pin:focus-visible{outline:2px solid var(--blue);outline-offset:2px}
+.rv label{display:flex;flex-direction:column;gap:4px;font-size:12px;color:var(--mute);min-width:0}
+.rv input,.rv select{font:inherit;font-size:14px;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:7px 8px;min-width:0;width:100%}
+.rv input[readonly]{opacity:.85}
+.btn{border:1px solid var(--blue);background:var(--blue);color:#fff;border-radius:6px;padding:8px 16px;font:inherit;font-size:14px;font-weight:700;cursor:pointer}
+.btn.ghost{background:transparent;color:var(--blue)}
+.lookup{display:grid;grid-template-columns:minmax(160px,1.2fr) minmax(220px,2fr) auto;gap:10px;align-items:end}
+.regmeta{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;margin-top:12px}
+.regmeta div{background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:8px 10px}
+.regmeta small{display:block;font-size:11.5px;color:var(--mute)}
+.regmeta b{font-size:14px;font-variant-numeric:tabular-nums}
+.ftab{margin-top:12px}
+.ftab table{font-size:13px}
+.ftab input{padding:4px 6px;width:72px;font-family:var(--mono);font-size:13px}
+.ftab td,.ftab th{padding:6px 10px}
+.note{font-size:12px;color:var(--mute);margin:10px 0 0}
+.stat{display:inline-block;font-size:11px;font-weight:700;border-radius:4px;padding:1px 6px}
+.stat.src{background:var(--amber-soft);color:var(--amber)}
+.admin{display:none;margin-top:12px;padding-top:12px;border-top:1px dashed var(--line);grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}
+.is-admin .admin{display:grid}
+.main{display:grid;grid-template-columns:minmax(0,1.05fr) minmax(0,1fr);gap:14px;align-items:start;margin-top:14px}
+.plan{display:grid;grid-template-columns:104px minmax(0,1fr);gap:12px}
+.floors{display:flex;flex-direction:column;gap:6px}
+.fbtn{border:1px solid var(--line);background:var(--bg);color:var(--ink);border-radius:6px;padding:7px 8px;font:inherit;cursor:pointer;text-align:left;display:flex;flex-direction:column;gap:4px}
+.fbtn[aria-pressed="true"]{border-color:var(--blue);background:var(--blue-soft);box-shadow:inset 3px 0 0 var(--blue)}
+.fbtn b{font-family:var(--mono);font-size:14px}
+.fbtn small{font-family:var(--mono);color:var(--mute);font-size:11px}
+.bar{height:5px;border-radius:3px;background:var(--line);overflow:hidden}
+.bar i{display:block;height:100%;background:var(--ok)}
+.fbtn[data-st="warn"] .bar i{background:var(--warn)}.fbtn[data-st="bad"] .bar i{background:var(--bad)}
+.svgbox{min-width:0;overflow-x:auto}
+.svgbox svg{display:block;max-width:100%;height:auto;margin-inline:auto}
+.wall{fill:var(--surface);stroke:var(--ink);stroke-width:2.5}
+.core{fill:var(--wire);stroke:var(--mute);stroke-width:1.2}
+.zone{stroke:var(--line);stroke-width:1;stroke-dasharray:4 4}
+.tx{fill:var(--mute);font-family:var(--mono);font-size:10.5px}
+.tx.big{font-size:15px;opacity:.55}
+.door{stroke:var(--blue);stroke-width:4}
+.pin{cursor:pointer}
+.pin .shape{stroke-width:1.8}
+.pin text{font-family:var(--sans);font-weight:700;font-size:10px;text-anchor:middle;dominant-baseline:central;pointer-events:none}
+.pin.alarm{--c:var(--alarm)}.pin.water{--c:var(--water)}.pin.exit{--c:var(--exit)}
+.pin.on .shape{fill:var(--c);stroke:var(--c)}.pin.on text{fill:var(--surface)}
+.pin.off .shape{fill:var(--surface);stroke:var(--c);stroke-dasharray:3 2}.pin.off text{fill:var(--c)}
+.pin.rec .shape{stroke-width:1.2;opacity:.8}
+.pin.hl .shape{stroke:var(--ink);stroke-width:3}
+.lg{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:11.5px;color:var(--mute);margin-top:10px}
+.lg span{display:inline-flex;align-items:center;gap:5px}
+.sw{width:12px;height:12px;border-radius:3px;display:inline-block}
+.sw.a{background:var(--alarm)}.sw.w{background:var(--water)}.sw.e{background:var(--exit)}
+.sw.off{background:transparent;border:1.5px dashed var(--mute)}
+.cards{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
+.kc{border:1px solid var(--line);border-radius:6px;padding:8px 10px;background:var(--bg)}
+.kc small{display:block;color:var(--mute);font-size:11.5px}
+.kc b{font-family:var(--mono);font-size:20px;font-variant-numeric:tabular-nums}
+.kc.bad b{color:var(--bad)}.kc.ok b{color:var(--ok)}
+.rhead{display:flex;flex-wrap:wrap;justify-content:space-between;gap:8px;align-items:center;margin-bottom:10px}
+.rhead h2{font-size:13px;font-weight:700;letter-spacing:.02em}
+.sub{color:var(--mute);font-size:12.5px}
+.rows{display:flex;flex-direction:column;margin-top:12px}
+.row{padding:10px 0;border-top:1px solid var(--line);display:grid;grid-template-columns:minmax(0,1fr) 54px 54px 76px;gap:4px 8px;align-items:center}
+.row .nm{font-weight:700;min-width:0;font-size:13.5px}
+.row .nm small{display:block;font-weight:400;color:var(--mute);font-size:11.5px}
+.num{font-family:var(--mono);text-align:center;font-variant-numeric:tabular-nums}
+.th{font-size:11px;color:var(--mute);text-align:center;border-top:0;padding-block:0 6px}
+.badge{font-size:11.5px;font-weight:700;border-radius:4px;padding:2px 6px;text-align:center}
+.badge.ok{background:var(--okbg);color:var(--ok)}.badge.warn{background:var(--warnbg);color:var(--warn)}
+.badge.bad{background:var(--badbg);color:var(--bad)}.badge.na{background:var(--nabg);color:var(--na)}
+.chips{grid-column:1/-1;display:flex;flex-wrap:wrap;gap:4px}
+.chip{font-family:var(--mono);font-size:11px;border-radius:4px;padding:1px 6px;border:1px solid var(--line);background:var(--bg);color:var(--ink);cursor:pointer}
+.chip.on{border-color:var(--ok);color:var(--ok)}
+.chip.off{border-style:dashed;color:var(--bad);border-color:var(--bad)}
+.chip.rec{opacity:.75}
+.chip .f{color:var(--mute);margin-right:3px}
+.na-reason{grid-column:1/-1;font-size:12px;color:var(--mute)}
+pre{margin:0;max-height:520px;overflow:auto;background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:12px;font-family:var(--mono);font-size:12px;line-height:1.55}
+.hide{display:none}
+@media(max-width:980px){.main{grid-template-columns:minmax(0,1fr)}.lookup{grid-template-columns:minmax(0,1fr)}}
+@media(max-width:560px){.plan{grid-template-columns:minmax(0,1fr)}.floors{flex-direction:row;flex-wrap:wrap}.fbtn{flex:1 1 84px}.cards{grid-template-columns:repeat(2,minmax(0,1fr))}.row{grid-template-columns:minmax(0,1fr) 44px 44px 70px}}
+
+/* ===== 7. 스토리보드 ===== */
+.sbbar{display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between;margin-bottom:14px}
+.sbrow{display:flex;gap:14px;overflow-x:auto;padding-bottom:12px;align-items:flex-start}
+.frame{flex:none;width:240px;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:12px;display:flex;flex-direction:column;gap:8px}
+.frame .hd{display:flex;justify-content:space-between;align-items:center;gap:6px}
+.frame .no{font:500 12px var(--mono);color:var(--mute)}
+.frame .tools{display:flex;gap:2px}
+.frame .tools button{border:1px solid var(--line);background:var(--bg);color:var(--ink);border-radius:5px;width:28px;height:26px;font:inherit;font-size:13px;cursor:pointer}
+.frame .tools button:hover{border-color:var(--blue);color:var(--blue)}
+.frame .tools button.del:hover{border-color:var(--bad);color:var(--bad)}
+.frame input,.frame textarea,.frame select{font:inherit;font-size:13px;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:6px 8px;width:100%;min-width:0}
+.frame input.ttl{font-weight:700;font-size:14px}
+.frame textarea{resize:vertical;min-height:64px;line-height:1.5}
+.frame label{display:flex;flex-direction:column;gap:3px;font-size:11.5px;color:var(--mute)}
+.frame:focus-within{border-color:var(--blue)}
+.sb-thumb{width:147px;height:266px;overflow:hidden;margin-inline:auto;border-radius:14px}
+.sb-thumb .wf{width:210px}
+.sb-thumb .phone{transform:scale(.7);transform-origin:top left}
+.sb-thumb.none{display:grid;place-items:center;background:var(--wire);border:1px dashed var(--wire-line);color:var(--mute);font-size:12px}
+.frame .arrow{align-self:center;color:var(--mute)}
+.sbadd{flex:none;width:120px;min-height:200px;border:1px dashed var(--wire-line);border-radius:10px;background:transparent;color:var(--blue);font:inherit;font-weight:700;cursor:pointer}
+.sbadd:hover{background:var(--blue-soft)}
+@media(prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+
+<div class="wrap">
+<header class="top">
+  <div class="kicker">소방안전·점검 모듈 · 업체용 앱인앱</div>
+  <h1>앱 구조와 와이어프레임</h1>
+  <p>호스트 앱 안에서 열리는 업체용 소방점검 모듈의 구조입니다. 사용자는 업체의 점검원과 운영자이고, 건물주는 링크로 결과를 열람합니다. 이번 판에서는 등록된 건물을 건축물대장 층별 정보로 불러와 도면 위에서 설비 설치 여부를 켜고 끄는 <b>소방시설 배치 검토(B7)</b>를 건물 관리·점검에 추가했습니다.</p>
+</header>
+<nav class="nav2" aria-label="문서 목차"><a href="#ia">1 앱 구조</a><a href="#role">2 역할·권한</a><a href="#rule">3 공통 규칙</a><a href="#flow">4 핵심 흐름</a><a href="#scr">5 화면 와이어프레임</a><a href="#rv" class="hot">6 배치 검토 (도면·목록)</a><a href="#sb" class="hot">7 스토리보드</a><a href="#map">8 데이터 연결</a></nav>
+
+<section class="pane" id="ia">
+  <h2>1. 앱 구조 (정보 구조)</h2>
+  <p class="lead">호스트 앱의 메뉴 하나가 모듈 진입점이 되고, 모듈 안에서는 하단 탭 5개로 이동합니다. 건물주 열람 화면은 모듈 밖의 링크 전용 화면입니다. 파란 배경은 이번에 추가·변경한 화면입니다.</p>
+  <div class="tree">
+    <div class="tr-root">호스트 앱 → 소방안전·점검 (진입점)<small>E1 진입·동의 → E2 업체 선택(소속이 여러 곳일 때) → 마지막으로 본 탭으로 이동</small></div>
+    <div class="tr-cols">
+      <div class="tr-col"><h4>홈</h4><ul><li><span><span class="id">H1</span>점검원 홈 (오늘 작업)</span><span><i class="r1"></i></span></li><li><span><span class="id">H2</span>운영 대시보드</span><span><i class="r2"></i></span></li></ul></div>
+      <div class="tr-col"><h4>작업</h4><ul><li><span><span class="id">J1</span>작업 목록 (오늘·예정·완료)</span><span><i class="r1"></i><i class="r2"></i></span></li><li class="new"><span><span class="id">J2</span>작업 상세 (배치도 진입 추가)</span><span><i class="r1"></i><i class="r2"></i></span></li><li><span><span class="id">J3</span>설비 점검 · 소화기</span><span><i class="r1"></i></span></li><li><span><span class="id">J4</span>설비 점검 · 일반</span><span><i class="r1"></i></span></li><li><span><span class="id">J5</span>사진 증빙</span><span><i class="r1"></i></span></li><li><span><span class="id">J6</span>서명·제출</span><span><i class="r1"></i></span></li><li><span><span class="id">J7</span>전송 대기 (오프라인)</span><span><i class="r1"></i></span></li><li><span><span class="id">J8</span>작업 생성·배정</span><span><i class="r2"></i></span></li></ul></div>
+      <div class="tr-col"><h4>건물 관리·점검</h4><ul><li><span><span class="id">B1</span>건물 목록</span><span><i class="r1"></i><i class="r2"></i></span></li><li class="new"><span><span class="id">B2</span>건물 상세·이력 (배치 검토 진입)</span><span><i class="r1"></i><i class="r2"></i></span></li><li><span><span class="id">B3</span>설비 관리</span><span><i class="r2"></i></span></li><li><span><span class="id">B4</span>계약·점검 주기</span><span><i class="r2"></i></span></li><li class="new"><span><span class="id">B5</span>건물 등록 (대장 층별 조회)</span><span><i class="r2"></i></span></li><li><span><span class="id">B6</span>일괄 등록 (CSV)</span><span><i class="r2"></i></span></li><li class="new"><span><span class="id">B7</span>소방시설 배치 검토 (도면·목록)</span><span><i class="r1"></i><i class="r2"></i></span></li></ul></div>
+      <div class="tr-col"><h4>보고서</h4><ul><li><span><span class="id">R1</span>보고서 목록</span><span><i class="r1"></i><i class="r2"></i></span></li><li><span><span class="id">R2</span>보고서 상세·미리보기</span><span><i class="r1"></i><i class="r2"></i></span></li><li><span><span class="id">R3</span>발송 설정 (링크·만료)</span><span><i class="r2"></i></span></li></ul></div>
+      <div class="tr-col"><h4>더보기</h4><ul><li><span><span class="id">M1</span>더보기 메뉴</span><span><i class="r1"></i><i class="r2"></i></span></li><li><span><span class="id">M2</span>직원 관리·초대</span><span><i class="r2"></i></span></li><li><span><span class="id">M3</span>알림 설정</span><span><i class="r1"></i><i class="r2"></i></span></li><li><span><span class="id">M4</span>업체 정보·구독</span><span><i class="r2"></i></span></li><li><span><span class="id">M5</span>자료실 (기존 자료 재사용)</span><span><i class="r1"></i><i class="r2"></i></span></li></ul></div>
+      <div class="tr-col" style="border-style:dashed"><h4>모듈 밖 · 링크 열람</h4><ul><li><span><span class="id">O1</span>점검 결과 열람</span><span><i class="r3"></i></span></li><li><span><span class="id">O2</span>조치 확인·요청</span><span><i class="r3"></i></span></li></ul></div>
+    </div>
+    <div class="legend"><span><i class="r1"></i> 점검원</span><span><i class="r2"></i> 운영자</span><span><i class="r3"></i> 건물주(링크, 로그인 없음)</span></div>
+  </div>
+</section>
+
+<section class="pane" id="role">
+  <h2>2. 역할과 접근 권한</h2>
+  <p class="lead">업체(조직) 단위로 데이터를 분리하고, 같은 업체 안에서 역할로 나눕니다. 점검원은 자신에게 배정된 작업만 보고, 운영자는 업체 전체를 봅니다.</p>
+  <div class="tw"><table>
+    <tr><th>기능</th><th>점검원</th><th>운영자</th><th>건물주(링크)</th></tr>
+    <tr><td>배정된 작업 조회·점검·제출</td><td>가능(본인 배정만)</td><td>가능(전체, 대리 점검 시 기록 남김)</td><td>없음</td></tr>
+    <tr><td>작업 생성·배정·재배정</td><td>없음</td><td>가능</td><td>없음</td></tr>
+    <tr><td>건물·설비·계약 등록/수정</td><td>조회만</td><td>가능</td><td>없음</td></tr>
+    <tr><td><b>건축물대장 조회·층별 정보 갱신</b></td><td>조회만</td><td>가능</td><td>없음</td></tr>
+    <tr><td><b>배치도에서 설비 설치 on/off 기록</b></td><td>가능(배정된 건물)</td><td>조회, 기준값 수정</td><td>없음</td></tr>
+    <tr><td>제출된 점검 결과 수정</td><td>불가(잠금)</td><td>불가. 정정은 새 점검으로 기록</td><td>없음</td></tr>
+    <tr><td>보고서 조회</td><td>본인 작업분</td><td>전체</td><td>링크에 해당하는 1건</td></tr>
+    <tr><td>보고서 발송·만료 설정</td><td>없음</td><td>가능</td><td>없음</td></tr>
+    <tr><td>직원 초대·권한 변경, 구독 관리</td><td>없음</td><td>가능</td><td>없음</td></tr>
+    <tr><td>조치 확인 표시</td><td>없음</td><td>조회</td><td>가능</td></tr>
+  </table></div>
+</section>
+
+<section class="pane" id="rule">
+  <h2>3. 공통 규칙과 화면 상태</h2>
+  <div class="states">
+    <div class="card"><h4>내비게이션</h4><ul><li>탭 안에서는 스택 이동, 뒤로가기는 호스트 규약을 따름</li><li>점검 입력 중 이탈 시 임시 저장 후 확인 팝업</li><li>알림 딥링크: 작업 상세(J2), 보고서 상세(R2)로 직접 진입</li></ul></div>
+    <div class="card"><h4>오프라인</h4><ul><li>상단에 오프라인 배너, 작업·건물 정보는 기기 캐시 사용</li><li>대장 스냅샷과 배치도도 캐시에 저장, 설치 on/off 기록은 전송 대기(J7)에 쌓임</li><li>전송 충돌 시 서버 기록을 우선하고 점검원에게 알림</li></ul></div>
+    <div class="card"><h4>빈 상태</h4><ul><li>작업 없음: "오늘 예정된 작업이 없습니다" + 예정 작업 바로가기</li><li>건물 없음(운영자): 건물 등록·일괄 등록 안내</li><li>대장 조회 결과 없음: 지번 재확인 또는 층별 정보 직접 입력</li></ul></div>
+    <div class="card"><h4>오류·권한</h4><ul><li>소속 업체 없음: 가입 안내 화면(E3)</li><li>권한 없는 화면 진입: 이전 화면으로 이동 + 안내</li><li>링크 만료: 만료 안내와 업체 연락 방법 표시</li></ul></div>
+    <div class="card"><h4>증빙 규칙</h4><ul><li>보수필요·불량은 사진 1장 이상 필수</li><li>제출 시 서명, 제출 시각, 점검자 기록 후 잠금</li><li>정정은 수정이 아닌 재점검 작업으로 처리</li></ul></div>
+    <div class="card"><h4>배치 검토 규칙</h4><ul><li>필수 수량은 대장의 층별 면적·용도와 층고로 계산</li><li>핀 윤곽 = 미설치, 채움 = 설치, 눌러서 전환</li><li>계산 결과는 참고용, 설계 확정은 전문가·소방서 확인</li></ul></div>
+  </div>
+</section>
+
+<section class="pane" id="flow">
+  <h2>4. 핵심 흐름</h2>
+  <h3>점검원: 하루 점검</h3>
+  <div class="flowrow"><span>호스트 앱 진입</span><i>→</i><span>H1 오늘 작업</span><i>→</i><span>J2 작업 상세</span><i>→</i><span class="new">B7 배치도에서 설비 on/off</span><i>→</i><span>J3/J4 설비별 점검</span><i>→</i><span>J5 사진</span><i>→</i><span>J6 서명·제출</span><i>→</i><span>J7 오프라인이면 대기</span></div>
+  <h3>운영자: 배정과 보고</h3>
+  <div class="flowrow"><span>H2 대시보드</span><i>→</i><span>J8 작업 생성·배정</span><i>→</i><span>(점검원 수행)</span><i>→</i><span>R2 보고서 확인</span><i>→</i><span>R3 발송</span><i>→</i><span>O1 건물주 열람</span><i>→</i><span>O2 확인</span></div>
+  <h3>운영자: 신규 건물</h3>
+  <div class="flowrow"><span>B1 건물 목록</span><i>→</i><span class="new">B5 지번 입력·대장 층별 조회</span><i>→</i><span class="new">B7 배치 검토(필수 수량 계산)</span><i>→</i><span>B3 설비 확정</span><i>→</i><span>B4 계약·주기</span><i>→</i><span>J8 첫 작업 자동 생성</span></div>
+</section>
+
+<section class="pane" id="scr">
+  <h2>5. 화면 와이어프레임</h2>
+  <p class="lead">화면마다 역할, 이동 경로, 사용하는 데이터를 적었습니다. 파란 테두리는 추가·변경 화면입니다. 가로로 스크롤해서 보세요. B7은 아래 6번에서 실제로 동작합니다.</p>
+  <div id="wfroot"></div>
+</section>
+
+<section class="pane rv" id="rv">
+  <h2>6. 소방시설 배치 검토 (B7) · 도면·목록</h2>
+  <p class="lead">등록된 건물을 고르거나 지번을 넣고 대장 조회를 누르면 지상·지하 층수, 층별 면적, 층별 용도, 층고가 채워지고, 층마다 필수 설비 수량과 권장 위치가 도면에 나옵니다. 핀이나 목록 항목을 눌러 설치 여부를 켜고 끕니다.</p>
+  <div class="callout amb">대장 값은 이 화면에서 건축HUB(건축물대장 표제부·층별개요)를 직접 호출하지 못해 <b>샘플 대장 3건</b>으로 채웁니다. 앱에서는 같은 구조의 응답(층별 번호·면적·주용도, 표제부 높이)으로 바꿔 끼우면 됩니다. 층고는 대장에 층별 값이 없어 표제부 높이를 층수로 나눈 값을 처음 값으로 쓰고, 현장 실측으로 고칩니다.</div>
+
+  <div class="top2">
+    <div class="seg" role="group" aria-label="사용자 구분">
+      <button id="rInsp" aria-pressed="true">점검원 화면</button>
+      <button id="rAdm" aria-pressed="false">운영자 화면</button>
+    </div>
+    <div class="seg" role="group" aria-label="보기">
+      <button id="vMain" aria-pressed="true">도면·목록</button>
+      <button id="vApi" aria-pressed="false">API 응답</button>
+    </div>
+  </div>
+
+  <div class="panel" aria-label="건축물대장 조회">
+    <div class="lookup">
+      <label>등록된 건물 (B1)<select id="bsel"></select></label>
+      <label>지번 주소<input id="lot" list="lots" autocomplete="off"><datalist id="lots"></datalist></label>
+      <button class="btn" id="lookup">대장 조회</button>
+    </div>
+    <div class="regmeta" id="regmeta"></div>
+    <div class="tw ftab"><table>
+      <thead><tr><th>층</th><th>층별 면적(㎡)</th><th>층별 용도</th><th>층고(m)</th></tr></thead>
+      <tbody id="ftb"></tbody>
+    </table></div>
+    <p class="note" id="lookNote"></p>
+    <div class="admin" aria-label="운영자 기준값">
+      <label>감지기 1개당 면적(㎡)<input id="rDet" type="number" value="70"></label>
+      <label>소화기 1단위당 면적(㎡)<input id="rExt" type="number" value="200"></label>
+      <label>스프링클러 층 기준면적(㎡)<input id="rSpr" type="number" value="1000"></label>
+      <label>옥내소화전 연면적 기준(㎡)<input id="rHyd" type="number" value="3000"></label>
+    </div>
+  </div>
+
+  <div id="mainView" class="main">
+    <section class="panel" aria-label="층 평면">
+      <div class="rhead"><h2 id="planTitle">평면도</h2><span class="sub" id="planInfo"></span></div>
+      <div class="plan">
+        <div class="floors" id="floors"></div>
+        <div class="svgbox" id="svgbox"></div>
+      </div>
+      <div class="lg">
+        <span><i class="sw a"></i>경보·감지</span><span><i class="sw w"></i>소화</span><span><i class="sw e"></i>피난</span>
+        <span><i class="sw off"></i>점선 윤곽 = 미설치</span><span>채움 = 설치 확인</span><span>옅은 핀 = 권고(법정 아님)</span>
+      </div>
+      <p class="note" id="clickNote"></p>
+    </section>
+    <section class="panel" aria-label="설비 목록">
+      <div class="rhead">
+        <h2>필수 설비와 설치 현황</h2>
+        <div class="seg" role="group" aria-label="범위">
+          <button id="scFloor" aria-pressed="true">선택한 층</button>
+          <button id="scAll" aria-pressed="false">건물 전체</button>
+        </div>
+      </div>
+      <div class="cards" id="cards"></div>
+      <div class="rows" id="rows"></div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px">
+        <button class="btn ghost" id="allOn">이 범위 전부 설치로 표시</button>
+        <button class="btn ghost" id="allOff">이 범위 전부 미설치로 표시</button>
+      </div>
+      <p class="note">수량은 화재안전기준(NFTC)의 대표 조항을 단순화한 계산입니다. 실제 대상 여부와 수량은 용도, 구획, 무창층 여부, 지자체 조례에 따라 달라지므로 소방설계 전문가와 관할 소방서 확인이 필요합니다. 처음 표시된 설치 상태는 직전 점검 기록을 흉내 낸 예시입니다.</p>
+    </section>
+  </div>
+  <section id="apiView" class="panel hide" style="margin-top:14px" aria-label="API 응답">
+    <div class="rhead"><h2>앱 연동용 응답 (대장 스냅샷 + 배치 결과)</h2><button class="btn ghost" id="copy">복사</button></div>
+    <p class="sub" style="margin-bottom:10px">핀 좌표는 도면 가로·세로 대비 0~1 비율입니다. 같은 응답을 건축 도면 위에 겹쳐 그릴 수 있습니다.</p>
+    <pre id="json"></pre>
+  </section>
+</section>
+
+<section class="pane" id="sb">
+  <h2>7. 스토리보드 (수정 가능)</h2>
+  <p class="lead">사용자가 하루 동안 앱을 쓰는 장면을 순서대로 보여줍니다. 장면마다 제목, 상황과 행동, 연결 화면, 메모를 바로 고칠 수 있고, 장면을 복제·삭제·좌우 이동하거나 새로 추가할 수 있습니다. 화면 썸네일은 5번 와이어프레임에서 가져옵니다.</p>
+  <div class="sbbar">
+    <div class="seg" role="group" aria-label="시나리오" id="sbtabs"></div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+      <button class="btn ghost" id="sbCopy">텍스트로 복사</button>
+      <button class="btn ghost" id="sbReset">이 시나리오 처음으로</button>
+    </div>
+  </div>
+  <div class="sbrow" id="sbrow"></div>
+  <p class="note" id="sbNote">수정 내용은 이 브라우저에 저장됩니다. 다른 기기나 다른 사람에게는 보이지 않으니, 공유할 때는 "텍스트로 복사"를 쓰세요.</p>
+</section>
+
+<section class="pane" id="map">
+  <h2>8. 화면과 데이터 연결</h2>
+  <div class="tw"><table>
+    <tr><th>엔티티</th><th>주요 필드</th><th>쓰는 화면</th><th>기존 코드</th></tr>
+    <tr><td>Organization</td><td>상호, 사업자번호, 구독 상태</td><td>E2, M4</td><td>신규</td></tr>
+    <tr><td>Member</td><td>업체, 역할, 자격번호, 호스트 사용자 ID</td><td>E1, M2, J8</td><td>User 확장</td></tr>
+    <tr><td>Client</td><td>건물주·관리사무소, 연락처, 열람 토큰</td><td>B2, R3, O1</td><td>신규</td></tr>
+    <tr><td>Building / Area / FireFacility</td><td>주소, 분류, 구역, 설비 종류·수량</td><td>B1~B7, J2</td><td>재사용(수정)</td></tr>
+    <tr class="new"><td><b>RegisterSnapshot</b> (대장 스냅샷)</td><td>지번, 지상·지하 층수, 주용도, 표제부 높이, 조회 시각</td><td>B5, B7</td><td>신규 (getBuildingData 확장)</td></tr>
+    <tr class="new"><td><b>BuildingFloor</b></td><td>층 번호, 층별 면적, 층별 용도, 층고(실측 보정값)</td><td>B5, B7</td><td>신규</td></tr>
+    <tr class="new"><td><b>FacilityPlacement</b></td><td>건물, 층, 설비 종류, 좌표(0~1), 법정/권고, 설치 여부, 기록자·시각</td><td>B7, J2, J3</td><td>신규</td></tr>
+    <tr><td>Contract</td><td>업체–건물, 기간, 점검 주기·범위</td><td>B4, J8</td><td>신규 (managerIds 대체)</td></tr>
+    <tr><td>InspectionJob</td><td>건물, 설비 범위, 예정일, 담당자, 상태</td><td>H1, H2, J1, J2, J8</td><td>신규</td></tr>
+    <tr><td>FireFacilityManagement</td><td>작업 ID, 항목별 결과, 사진, 서명, 확정 시각</td><td>J3~J7, B2, R2</td><td>재사용(증빙·잠금 추가)</td></tr>
+    <tr><td>Report</td><td>작업 ID, 발송·만료·확인 상태, PDF 경로</td><td>R1~R3, O1, O2</td><td>신규</td></tr>
+    <tr><td>FireFacility 템플릿 / 콘텐츠</td><td>설비별 점검 항목, 법령·양식</td><td>J3, J4, M5</td><td>재사용(관리자 웹)</td></tr>
+  </table></div>
+</section>
+</div>
+
+<script>
+/* ---------- 와이어프레임 ---------- */
+const planSvg=()=>{let p='';[[14,14],[46,14],[78,14],[14,40],[46,40],[78,40]].forEach((q,i)=>{p+=`<circle cx="${q[0]}" cy="${q[1]}" r="5" fill="${i%3===1?'none':'var(--blue)'}" stroke="var(--blue)" stroke-width="1.3" ${i%3===1?'stroke-dasharray="2 1.5"':''}/>`});
+ p+='<rect x="100" y="8" width="14" height="12" fill="var(--wire)" stroke="var(--wire-line)"/><rect x="20" y="52" width="9" height="9" rx="1.5" fill="var(--blue)"/><rect x="70" y="52" width="9" height="9" rx="1.5" fill="none" stroke="var(--blue)" stroke-dasharray="2 1.5"/>';
+ return `<div class="w-plan"><svg viewBox="0 0 120 70"><rect x="2" y="2" width="116" height="66" fill="none" stroke="var(--wire-line)" stroke-width="2"/>${p}</svg></div>`};
+const r=(it)=>{const [k,a,b]=it;
+ if(k==='host')return `<div class="host"><span>‹ 호스트 앱</span><span>소방안전·점검</span></div>`;
+ if(k==='bar')return `<div class="w-bar"><span>${a}</span><span>${b||''}</span></div>`;
+ if(k==='off')return `<div class="w-off">오프라인 · 기기에 저장 중</div>`;
+ if(k==='in')return `<div class="w-in">${a}</div>`;
+ if(k==='btn')return `<div class="w-btn">${a}</div>`;
+ if(k==='gbtn')return `<div class="w-btn ghost" style="margin-top:0">${a}</div>`;
+ if(k==='box')return `<div class="w-box" style="min-height:${b||54}px">${a}</div>`;
+ if(k==='t')return `<div class="w-t">${a}</div>`;
+ if(k==='s')return `<div class="w-s">${a}</div>`;
+ if(k==='li')return a.map(x=>`<div class="w-li"><span>${x}</span><span>›</span></div>`).join('');
+ if(k==='chk')return a.map(x=>`<div class="w-chk"><i class="${x[0]==='+'?'on':''}"></i>${x.replace(/^[+-]/,'')}</div>`).join('');
+ if(k==='seg')return `<div class="w-seg">${a.map((x,i)=>`<span class="${i===(b||0)?'on':''}">${x}</span>`).join('')}</div>`;
+ if(k==='tabs')return `<div class="w-tabs">${a.map((x,i)=>`<span class="${i===(b||0)?'on':''}">${x}</span>`).join('')}</div>`;
+ if(k==='kpi')return `<div class="w-kpi">${a.map(x=>`<div><span class="w-s">${x[0]}</span><b>${x[1]}</b></div>`).join('')}</div>`;
+ if(k==='prog')return `<div><div class="w-prog"><i style="width:${a}%"></i></div><div class="w-s">${b||''}</div></div>`;
+ if(k==='sig')return `<div class="w-sig">서명 영역</div>`;
+ if(k==='warn')return `<div class="w-warn">${a}</div>`;
+ if(k==='plan')return planSvg();
+ if(k==='tab')return `<div class="w-tab">${['홈','작업','건물','보고서','더보기'].map((x,i)=>`<b class="${i===a?'on':''}">${x}</b>`).join('')}</div>`;
+ return '';};
+const P='<i class="r1"></i>',O='<i class="r2"></i>',C='<i class="r3"></i>';
+const G=[
+['E · 진입',[
+ {id:'E1',t:'호스트 진입·동의',ro:P+O,go:'호스트 메뉴 → E1 → E2/H1',d:'Member, 개인정보 제공 동의',u:[['host'],['t','소방안전·점검'],['s','호스트 계정으로 시작합니다'],['box','제공 항목: 이름, 소속, 연락처',50],['chk',['-개인정보 제공에 동의합니다']],['btn','시작하기']]},
+ {id:'E2',t:'업체 선택',ro:P+O,go:'E1 → E2 → 홈',d:'Organization, Member',u:[['host'],['t','소속 업체 선택'],['s','여러 업체에 소속되어 있습니다'],['li',['세이프파트너스 · 운영자','제일소방 · 점검원']],['btn','선택']]},
+ {id:'E3',t:'소속 없음 안내',ro:P+O,go:'E1 → E3',d:'Member (없음)',u:[['host'],['box','소속된 업체가 없습니다',80],['s','업체 운영자에게 초대를 요청하세요'],['gbtn','초대 코드 입력'],['gbtn','호스트 앱으로 돌아가기']]}
+]],
+['H · 홈',[
+ {id:'H1',t:'점검원 홈',ro:P,go:'→ J2 작업 상세, 탭 이동',d:'InspectionJob(본인 배정)',u:[['host'],['t','이도윤님, 오늘 2건'],['li',['푸른솔 상가 · 설비 0/4','중앙빌딩 · 설비 0/2']],['t','내일'],['li',['한빛프라자']],['warn','전송 대기 1건'],['tab',0]]},
+ {id:'H2',t:'운영 대시보드',ro:O,go:'→ J8 배정, J1 목록',d:'InspectionJob 집계, Member',u:[['host'],['t','운영 현황'],['kpi',[['오늘','3'],['미배정','1'],['기한 초과','1'],['월 완료','12']]],['t','담당자별 진행'],['prog',66,'이도윤 2/3'],['prog',0,'박서연 0/1'],['warn','미배정 1건 · 배정하기'],['tab',0]]}
+]],
+['J · 작업과 점검',[
+ {id:'J1',t:'작업 목록',ro:P+O,go:'→ J2',d:'InspectionJob',u:[['host'],['seg',['오늘','예정','완료']],['li',['푸른솔 상가 · 작동점검 · 진행 중','중앙빌딩 · 예정','한빛프라자 · 기한 초과']],['btn','+ 점검 작업 만들기 (운영자)'],['tab',1]],chg:0},
+ {id:'J2',t:'작업 상세',ro:P+O,go:'→ B7(배치도), J3/J4, J6, J8(배정)',d:'InspectionJob, Building, FireFacility, FacilityPlacement',chg:1,u:[['bar','←','푸른솔 상가'],['s','작동점검 · 오늘 · 담당 이도윤'],['gbtn','배치도에서 설치 확인 (B7)'],['li',['소화기 · 점검 완료','자동화재탐지설비 · 미점검','옥내소화전설비 · 미점검','피난유도등 · 미점검']],['prog',25,'설비 1/4'],['btn','서명하고 제출 (전부 완료 시)']]},
+ {id:'J3',t:'설비 점검 · 소화기',ro:P,go:'J2 → J3 → J5 → J2',d:'FireFacility 템플릿, Management',u:[['bar','←','소화기 점검'],['t','안전핀 고정 상태'],['seg',['정상','보수필요','불량']],['t','호스 균열 없을 것'],['seg',['정상','보수필요','불량'],1],['box','현장 사진 안내',40],['gbtn','+ 사진 추가 (필수)'],['btn','저장']]},
+ {id:'J4',t:'설비 점검 · 일반',ro:P,go:'J2 → J4 → J2',d:'FireFacility 템플릿(texts)',u:[['bar','←','자동화재탐지설비'],['chk',['+감지기 외형·탈착','+테스트버튼 음향·적색등','-수신기 표시 정상']],['in','비고 (위치, 증상)'],['gbtn','+ 사진 추가'],['btn','저장']]},
+ {id:'J5',t:'사진 증빙',ro:P,go:'J3/J4 → J5 → 복귀',d:'Management.photos, Storage',u:[['bar','←','사진 추가'],['box','카메라 미리보기',120],['gbtn','갤러리에서 선택'],['s','촬영 3장 · 항목에 연결됨'],['warn','호스트가 카메라를 막으면 파일 선택으로 대체'],['btn','완료']]},
+ {id:'J6',t:'서명·제출',ro:P,go:'J2 → J6 → J7/R1',d:'Management(확정), Report 생성',u:[['bar','←','점검 확인 서명'],['s','설비 4종 · 조치 필요 1건'],['sig'],['gbtn','다시 쓰기'],['btn','제출 (제출 후 수정 불가)']]},
+ {id:'J7',t:'전송 대기 (오프라인)',ro:P,go:'연결 복구 시 자동 → R1',d:'기기 임시 저장소',u:[['host'],['off'],['t','전송 대기 1건'],['li',['푸른솔 상가 · 제출 10/13 11:02']],['s','연결되면 자동으로 전송됩니다'],['gbtn','지금 다시 시도'],['tab',1]]},
+ {id:'J8',t:'작업 생성·배정',ro:O,go:'H2/J1/B2 → J8 → J1',d:'InspectionJob, Contract, Member',u:[['bar','←','점검 작업 만들기'],['in','건물 선택'],['in','점검 유형 · 작동점검'],['in','예정일'],['in','담당자 선택'],['chk',['+계약 설비 전체 포함']],['btn','저장 후 알림 발송']]}
+]],
+['B · 건물 관리·점검',[
+ {id:'B1',t:'건물 목록',ro:P+O,go:'→ B2, B5',d:'Building, InspectionJob(다음 점검)',u:[['host'],['in','건물·건물주 검색'],['li',['푸른솔 상가 · 10/20','중앙빌딩 · 기한 초과','한빛프라자 · 11/03']],['btn','+ 건물 등록 (운영자)'],['tab',2]]},
+ {id:'B2',t:'건물 상세·이력',ro:P+O,go:'→ B7, B3, B4, R2',d:'Building, Contract, Management, RegisterSnapshot',chg:1,u:[['bar','←','푸른솔 상가'],['s','근린생활시설 · 지상4/지하1'],['gbtn','소방시설 배치 검토 (B7)'],['li',['건물주 · 푸른솔 관리단','계약 · 월 1회 작동점검','설비 4종']],['t','점검 이력'],['li',['10/06 이도윤 · 조치 1건','09/05 박서연 · 정상']],['gbtn','점검 작업 만들기']]},
+ {id:'B3',t:'설비 관리',ro:O,go:'B2/B7 → B3',d:'FireFacility, Area',u:[['bar','←','설비 관리'],['t','1층 로비'],['li',['소화기 × 12','자동화재탐지설비 × 1식']],['t','지하 1층'],['li',['옥내소화전설비 × 8']],['btn','+ 설비 추가']]},
+ {id:'B4',t:'계약·점검 주기',ro:O,go:'B2 → B4',d:'Contract',u:[['bar','←','계약'],['in','계약 기간'],['in','점검 주기 · 월 1회'],['in','점검 범위(설비)'],['chk',['+기한 3일 전 알림','-자동으로 작업 생성']],['btn','저장']]},
+ {id:'B5',t:'건물 등록 (대장 층별 조회)',ro:O,go:'B1 → B5 → B7 → B3 → B4',d:'Building, RegisterSnapshot, BuildingFloor (건축HUB 표제부·층별개요)',chg:1,u:[['bar','←','건물 등록'],['in','건물 별칭'],['in','지번 주소'],['btn','건축물대장 조회'],['s','지상4/지하1 · 근린생활시설'],['li',['B1 · 300㎡ · 주차장','1F · 310㎡ · 소매점','2F · 300㎡ · 사무소','3F~4F · 300㎡/280㎡']],['in','층고 (표제부 높이 ÷ 층수, 수정 가능)'],['btn','이 건물로 등록']]},
+ {id:'B6',t:'일괄 등록 (CSV)',ro:O,go:'B1 → B6 → B1',d:'Building 다건',u:[['bar','←','일괄 등록'],['box','CSV 파일 선택',60],['gbtn','양식 내려받기'],['s','미리보기: 48행 중 오류 2행'],['warn','7행 주소 확인 필요'],['btn','등록']]},
+ {id:'B7',t:'소방시설 배치 검토 (도면·목록)',ro:P+O,go:'B2/J2/B5 → B7 → B3 / J3',d:'BuildingFloor, FacilityPlacement, 기준값(운영자)',chg:1,u:[['bar','←','배치 검토'],['s','푸른솔 상가 · 근린생활시설'],['seg',['B1','1F','2F','3F','4F'],1],['plan'],['kpi',[['법정 필수','16'],['부족','3']]],['chk',['+소화기 E1','-소화기 E2','+발신기 P1','-열감지기 D4']],['btn','점검 결과 반영']]}
+]],
+['R · 보고서',[
+ {id:'R1',t:'보고서 목록',ro:P+O,go:'→ R2',d:'Report',u:[['host'],['seg',['전체','미발송','확인 대기']],['li',['푸른솔 상가 · 10/13 · 미발송','푸른솔 상가 · 10/06 · 확인됨','중앙빌딩 · 09/29 · 발송됨']],['tab',3]]},
+ {id:'R2',t:'보고서 상세·미리보기',ro:P+O,go:'→ R3, O1(미리보기)',d:'Report, Management',u:[['bar','←','점검 보고서'],['t','푸른솔 상가 · 10/06'],['kpi',[['정상','13'],['조치 필요','1']]],['li',['소화기 · 외측 부식 · 사진 2장','서명 · 이도윤']],['gbtn','건물주 화면 미리보기'],['btn','건물주에게 발송 (운영자)']]},
+ {id:'R3',t:'발송 설정',ro:O,go:'R2 → R3 → R2',d:'Report, Client',u:[['bar','←','발송'],['in','수신자 · 푸른솔 관리단'],['in','발송 방식 · 알림톡/문자/링크 복사'],['in','열람 만료 · 7일'],['box','https://…/r/ab12 (링크)',34],['btn','발송']]}
+]],
+['O · 건물주 열람 (링크)',[
+ {id:'O1',t:'점검 결과 열람',ro:C,go:'링크 → O1 → O2',d:'Report(읽기 전용)',u:[['t','푸른솔 상가 소방시설 점검'],['s','세이프파트너스 · 2026-10-06'],['kpi',[['점검 항목','14'],['조치 필요','1']]],['t','조치가 필요한 항목'],['li',['소화기 · 외측 부식 · 보수필요']],['gbtn','보고서 PDF 내려받기']]},
+ {id:'O2',t:'조치 확인·요청',ro:C,go:'O1 → O2 → 완료',d:'Report.ack',u:[['t','조치 확인'],['chk',['-내용을 확인했습니다','-교체를 업체에 요청합니다']],['in','메모 (선택)'],['btn','전송'],['s','링크는 7일 후 만료됩니다']]}
+]],
+['M · 더보기',[
+ {id:'M1',t:'더보기 메뉴',ro:P+O,go:'→ M2~M5',d:'Member, Organization',u:[['host'],['t','세이프파트너스'],['s','내 역할 · 운영자'],['li',['직원 관리','알림 설정','업체 정보·구독','자료실','호스트 앱으로 돌아가기']],['tab',4]]},
+ {id:'M2',t:'직원 관리·초대',ro:O,go:'M1 → M2',d:'Member',u:[['bar','←','직원'],['li',['이도윤 · 점검원','박서연 · 점검원','최현우 · 운영자']],['in','초대할 연락처'],['btn','초대 링크 발송']]},
+ {id:'M3',t:'알림 설정',ro:P+O,go:'M1 → M3',d:'Member.notifications',u:[['bar','←','알림'],['chk',['+기한 임박','+새 작업 배정','-건물주 확인 완료 (운영자)']],['s','호스트 알림이 꺼져 있으면 문자로 대체']]},
+ {id:'M4',t:'업체 정보·구독',ro:O,go:'M1 → M4',d:'Organization',u:[['bar','←','업체 정보'],['in','상호 · 사업자번호'],['in','대표 연락처'],['t','구독'],['li',['요금제 · 건물 50곳','결제 내역']],['btn','저장']]},
+ {id:'M5',t:'자료실',ro:P+O,go:'M1 → M5',d:'기존 콘텐츠(양식·법령·점검방법·FAQ)',u:[['bar','←','자료실'],['tabs',['표준양식','점검방법','FAQ'],1],['in','점검 방법 검색'],['li',['소화기 점검 방법','자탐설비 점검 방법']],['s','기존 앱의 자료실을 그대로 재사용']]}
+]]];
+document.getElementById('wfroot').innerHTML=G.map(([g,l])=>`<div class="wf-group"><h3>${g}</h3><div class="wf-row">${l.map(s=>`<div class="wf${s.chg?' new':''}"><div class="phone">${s.u.map(r).join('')}</div><div class="cap"><b><span class="id">${s.id}</span>${s.t}</b><div class="meta">${s.ro}</div><p><b>이동</b> ${s.go}</p><p><b>데이터</b> ${s.d}</p></div></div>`).join('')}</div></div>`).join('');
+
+/* ---------- 소방시설 배치 검토 ---------- */
+(function(){
+/* 샘플 건축물대장: 앱에서는 건축HUB 표제부(getBrTitleInfo)·층별개요(getBrFlrOulnInfo) 응답으로 대체 */
+function mk(def){return def.map(function(x){var n=x[0];return{key:n,lvl:n[0]==='B'?-(+n.slice(1)):parseInt(n,10),b:n[0]==='B',area:x[1],use:x[2],h:x[3]}})}
+var REG=[
+ {id:'b1',name:'푸른솔 상가',lot:'경기도 성남시 분당구 정자동 123-4',use:'근린생활시설',heit:16.2,
+  floors:mk([['4F',280,'사무소',3.2],['3F',300,'사무소',3.2],['2F',300,'학원',3.2],['1F',310,'소매점',3.6],['B1',300,'주차장',3.0]])},
+ {id:'b2',name:'중앙빌딩',lot:'경기도 성남시 분당구 서현동 88-2',use:'업무시설',heit:27.6,
+  floors:mk([['6F',480,'사무소',3.3],['5F',480,'사무소',3.3],['4F',480,'사무소',3.3],['3F',480,'사무소',3.3],['2F',480,'사무소',3.3],['1F',520,'사무소·로비',4.2],['B1',560,'주차장',3.4],['B2',560,'기계실·주차장',3.4]])},
+ {id:'b3',name:'한빛프라자',lot:'경기도 성남시 분당구 야탑동 301-7',use:'판매시설',heit:15.4,
+  floors:mk([['3F',900,'판매',4.4],['2F',900,'판매',4.4],['1F',940,'판매',4.8],['B1',940,'판매·주차장',3.8]])}
+];
+var USE={'근린생활시설':{auto:600},'업무시설':{auto:1000},'판매시설':{auto:1000,spr:5000},'숙박시설':{auto:600},'교육연구시설':{auto:1000}};
+var T={
+ det:{n:'열감지기(차동식 스포트 2종)',g:'alarm',s:'D',sh:'c',rule:'NFTC 203 · 내화구조, 층고 4m 미만 70㎡당 1개 이상',where:'구획 천장 격자 배치'},
+ smk:{n:'연기감지기(계단)',g:'alarm',s:'M',sh:'c',rule:'NFTC 203 · 계단실 수직 15m 미만마다 1개 이상',where:'최하층·최상층 계단실 천장'},
+ pb:{n:'발신기',g:'alarm',s:'P',sh:'c',rule:'NFTC 203 · 층마다, 수평거리 25m 이하',where:'계단 출입구 옆 벽, 높이 0.8~1.5m'},
+ bell:{n:'경종(음향장치)',g:'alarm',s:'B',sh:'c',rule:'NFTC 203 · 층마다, 수평거리 25m 이하',where:'발신기 인근 벽'},
+ strobe:{n:'시각경보기',g:'alarm',s:'V',sh:'c',rule:'NFTC 203 · 대상 용도 여부 확인 필요',where:'복도·공용부 벽 상부'},
+ rcv:{n:'수신기',g:'alarm',s:'R',sh:'c',rule:'NFTC 203 · 상시 사람이 있는 장소 또는 1층 출입구 인근',where:'1층 출입구 인근 벽'},
+ ext:{n:'소화기',g:'water',s:'E',sh:'r',rule:'NFTC 101 · 층마다 3단위 이상, 보행거리 20m 이내 (권고는 구석 보완)',where:'계단 인근, 구획 끝 벽, 바닥에서 1.5m 이하'},
+ hyd:{n:'옥내소화전',g:'water',s:'H',sh:'r',rule:'NFTC 102 · 층마다, 수평거리 25m 이하',where:'계단 인근 벽'},
+ spr:{n:'스프링클러 헤드',g:'water',s:'',sh:'d',rule:'NFTC 103 · 내화구조 수평거리 2.3m 이하',where:'천장 격자 배치'},
+ exit:{n:'피난구유도등',g:'exit',s:'출',sh:'p',rule:'NFTC 303 · 계단·옥외 출입구 상부',where:'계단실 출입문 위, 1층 외부 출입구 위'},
+ path:{n:'복도통로유도등',g:'exit',s:'통',sh:'p',rule:'NFTC 303 · 구부러진 모퉁이와 보행거리 20m마다',where:'복도 바닥 가까운 벽'},
+ desc:{n:'완강기(피난기구)',g:'exit',s:'완',sh:'p',rule:'NFTC 301 · 3층 이상 10층 이하 층마다',where:'창가 고정 지지대 인근'}
+};
+var ORDER=['det','smk','pb','bell','strobe','rcv','ext','hyd','spr','exit','path','desc'];
+var R={det:70,ext:200,spr:1000,hyd:3000};
+var B=null,inst={},sel='1F',role='insp',scope='floor',hl=null,looked=false;
+
+function $(s){return document.querySelector(s)}
+function esc(s){return String(s).replace(/[&<>"]/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]})}
+function hash(s){var h=7;for(var i=0;i<s.length;i++)h=(h*31+s.charCodeAt(i))>>>0;return h%100}
+function isOn(d){var k=B.id+':'+d.id;return k in inst?inst[k]:hash(B.id+d.id)<72}
+function setOn(d,v){inst[B.id+':'+d.id]=v}
+function dimsOf(a){var W=Math.sqrt(a*.75);return{W:W,D:a/W}}
+function grid(n,x0,y0,x1,y1){var w=x1-x0,h=y1-y0,c=Math.max(1,Math.ceil(Math.sqrt(n*w/h))),r=Math.ceil(n/c),o=[];
+  for(var k=0;k<n;k++){var cx=k%c,cy=Math.floor(k/c);o.push([x0+w*(cx+.5)/c,y0+h*(cy+.5)/r])}return o}
+function fl(){return B.floors}
+function fcur(){return fl().filter(function(f){return f.key===sel})[0]}
+function ctx(){
+  var f0=fl(),total=f0.reduce(function(s,f){return s+f.area},0),thr=USE[B.use]||{auto:1000};
+  return{fl:f0,total:total,thr:thr,auto:total>=thr.auto,
+    spr:function(f){return ((f.b||f.lvl>=4)&&f.area>=R.spr)||(thr.spr&&total>=thr.spr)},
+    hyd:function(f){return total>=R.hyd||((f.b||f.lvl>=4)&&f.area>=600)}};
+}
+function gen(){
+  var c=ctx(),out=[],top=Math.max.apply(null,c.fl.map(function(f){return f.lvl})),bot=c.fl.reduce(function(m,f){return f.lvl<m.lvl?f:m}).key;
+  c.fl.forEach(function(f){
+    var A=f.area,dm=dimsOf(A),W=dm.W,D=dm.D;
+    function add(t,x,y,basis){var n=out.filter(function(o){return o.fk===f.key&&o.t===t}).length+1;
+      out.push({id:f.key+'-'+t+'-'+n,fk:f.key,t:t,n:n,x:x,y:y,W:W,D:D,basis:basis||'법정'})}
+    var y0=Math.min(6,D*.3);
+    if(c.auto){
+      var nd=Math.ceil(A/R.det*(f.h<4?1:2));
+      grid(nd,1,y0,W-1,D-1).forEach(function(p){add('det',p[0],p[1])});
+      if(f.key===bot||f.lvl===top)add('smk',W-2,2.6);
+      var np=Math.max(1,Math.ceil(A/1250));
+      for(var k=0;k<np;k++){var yy=4+k*Math.max(3,(D-8)/np);add('pb',W-5.4,yy);add('bell',W-6.6,yy);add('strobe',W-7.8,yy)}
+      if(f.lvl===1)add('rcv',W/2-3,D-1.4);
+    }
+    var legal=Math.max(1,Math.ceil(Math.ceil(A/R.ext)/3)),tot=Math.max(legal,Math.ceil(A/150));
+    var ep=[[W-2.4,7.5],[2,D-4],[2,y0+1],[W-2.4,D-4],[W/2,D/2]];
+    for(var e=0;e<tot;e++)add('ext',ep[e%ep.length][0],ep[e%ep.length][1]+Math.floor(e/ep.length)*1.5,e<legal?'법정':'권고');
+    add('exit',W-4.6,1.4);
+    if(f.lvl===1)add('exit',W/2,D-.9);
+    add('path',W/2,y0+2);add('path',W/2,D-5);
+    if(f.lvl>=3&&f.lvl<=10)for(var l=0;l<Math.ceil(A/800);l++)add('desc',.9,D/2+l*1.5);
+    if(c.spr(f))grid(Math.ceil(A/10.6),1,y0,W-1,D-1).forEach(function(p){add('spr',p[0],p[1])});
+    if(c.hyd(f))for(var h=0;h<Math.max(1,Math.ceil(A/1250));h++)add('hyd',W-5.6,7+h*3);
+  });
+  out.forEach(function(o){o.rx=+(o.x/o.W).toFixed(3);o.ry=+(o.y/o.D).toFixed(3)});
+  return out;
+}
+function stat(devs,t){
+  var l=devs.filter(function(d){return d.t===t&&d.basis==='법정'}),r=devs.filter(function(d){return d.t===t&&d.basis==='권고'});
+  var i=l.filter(isOn).length;
+  return{req:l.length,inst:i,rec:r.length,recInst:r.filter(isOn).length,st:l.length===0?'na':(i>=l.length?'ok':(i===0?'bad':'warn'))};
+}
+function totals(devs){var q=0,i=0;devs.forEach(function(d){if(d.basis==='법정'){q++;if(isOn(d))i++}});return{req:q,inst:i}}
+
+function renderFloors(devs){
+  $('#floors').innerHTML=fl().map(function(f){
+    var t=totals(devs.filter(function(d){return d.fk===f.key})),p=t.req?Math.round(t.inst/t.req*100):100;
+    var st=p>=100?'ok':(p>=60?'warn':'bad');
+    return '<button class="fbtn" data-fk="'+f.key+'" data-st="'+st+'" aria-pressed="'+(f.key===sel)+'"><b>'+f.key+'</b><small>'+f.area+'㎡ · '+t.inst+'/'+t.req+'</small><span class="bar"><i style="width:'+p+'%"></i></span></button>';
+  }).join('');
+}
+function shape(d,cls){
+  var m=T[d.t],x=d.sx,y=d.sy,s;
+  if(m.sh==='c')s='<circle class="shape" cx="'+x+'" cy="'+y+'" r="9"/>';
+  else if(m.sh==='r')s='<rect class="shape" x="'+(x-8)+'" y="'+(y-8)+'" width="16" height="16" rx="2"/>';
+  else if(m.sh==='p')s='<rect class="shape" x="'+(x-10)+'" y="'+(y-7)+'" width="20" height="14" rx="7"/>';
+  else s='<circle class="shape" cx="'+x+'" cy="'+y+'" r="4.5"/>';
+  return '<g class="pin '+m.g+' '+cls+'" data-id="'+d.id+'" tabindex="0" role="button" aria-label="'+esc(m.n+' '+d.fk+' '+d.n+(isOn(d)?' 설치':' 미설치'))+'"><title>'+esc(m.n+' #'+d.n+' · '+d.basis+' · '+(isOn(d)?'설치':'미설치'))+'</title>'+s+(m.s?'<text x="'+x+'" y="'+y+'">'+m.s+'</text>':'')+'</g>';
+}
+function renderPlan(devs){
+  var f=fcur(),mx=fl().reduce(function(m,x){return x.area>m?x.area:m},0),md=dimsOf(mx);
+  var S=Math.min(340/md.W,440/md.D),d=dimsOf(f.area),W=d.W,D=d.D,M=26,w=W*S+2*M,h=D*S+2*M;
+  var fd=devs.filter(function(x){return x.fk===sel});
+  fd.forEach(function(o){o.sx=+(M+o.x*S).toFixed(1);o.sy=+(M+o.y*S).toFixed(1)});
+  var X=function(m){return M+m*S};
+  var s='<svg viewBox="0 0 '+w.toFixed(0)+' '+h.toFixed(0)+'" width="'+w.toFixed(0)+'" role="img" aria-label="'+sel+' 평면도">';
+  s+='<rect class="wall" x="'+M+'" y="'+M+'" width="'+(W*S)+'" height="'+(D*S)+'"/>';
+  s+='<line class="zone" x1="'+X(W/2)+'" y1="'+X(0)+'" x2="'+X(W/2)+'" y2="'+X(D)+'"/><line class="zone" x1="'+X(0)+'" y1="'+X(D/2)+'" x2="'+X(W)+'" y2="'+X(D/2)+'"/>';
+  s+='<rect class="core" x="'+X(W-4)+'" y="'+X(0)+'" width="'+(4*S)+'" height="'+(5*S)+'"/><text class="tx" x="'+X(W-2)+'" y="'+X(4.4)+'" text-anchor="middle">계단</text>';
+  s+='<line class="door" x1="'+X(W-4)+'" y1="'+X(.9)+'" x2="'+X(W-4)+'" y2="'+X(2.1)+'"/>';
+  if(f.lvl===1)s+='<line class="door" x1="'+X(W/2-1.2)+'" y1="'+X(D)+'" x2="'+X(W/2+1.2)+'" y2="'+X(D)+'"/><text class="tx" x="'+X(W/2)+'" y="'+(X(D)+16)+'" text-anchor="middle">출입구</text>';
+  s+='<text class="tx big" x="'+X(W/4)+'" y="'+X(D/4)+'" text-anchor="middle">구획 A</text><text class="tx big" x="'+X(W*3/4)+'" y="'+X(D*3/4)+'" text-anchor="middle">구획 D</text>';
+  s+='<text class="tx" x="'+X(W/2)+'" y="'+(M-9)+'" text-anchor="middle">'+W.toFixed(1)+' m</text>';
+  s+='<text class="tx" x="'+(M-9)+'" y="'+X(D/2)+'" text-anchor="middle" transform="rotate(-90 '+(M-9)+' '+X(D/2)+')">'+D.toFixed(1)+' m</text>';
+  s+='<line x1="'+X(0)+'" y1="'+(h-8)+'" x2="'+X(5)+'" y2="'+(h-8)+'" stroke="currentColor" stroke-width="2" style="color:var(--mute)"/><text class="tx" x="'+(X(5)+6)+'" y="'+(h-4)+'">5 m</text>';
+  fd.forEach(function(o){s+=shape(o,(isOn(o)?'on':'off')+(o.basis==='권고'?' rec':'')+(hl===o.id?' hl':''))});
+  s+='</svg>';
+  $('#svgbox').innerHTML=s;
+  $('#planTitle').textContent=B.name+' · '+sel+' 평면도 (예시 배치)';
+  $('#planInfo').textContent=(f.b?'지하층':'지상층')+' · '+f.use+' · '+f.area+'㎡ · 층고 '+f.h+'m';
+}
+function renderList(devs){
+  var c=ctx(),f=fcur(),sc=scope==='floor'?devs.filter(function(d){return d.fk===sel}):devs;
+  var t=totals(sc),miss=t.req-t.inst,pct=t.req?Math.round(t.inst/t.req*100):100;
+  $('#cards').innerHTML='<div class="kc"><small>법정 필수</small><b>'+t.req+'</b></div><div class="kc"><small>설치 확인</small><b>'+t.inst+'</b></div><div class="kc '+(miss?'bad':'ok')+'"><small>부족</small><b>'+miss+'</b></div><div class="kc '+(miss?'':'ok')+'"><small>충족률</small><b>'+pct+'%</b></div>';
+  var rows='<div class="row th"><span style="text-align:left">설비 · 기준</span><span>필수</span><span>설치</span><span>상태</span></div>';
+  var fls=scope==='floor'?[f]:c.fl, at=scope==='floor'?f.area+'㎡':'각 층';
+  ORDER.forEach(function(k){
+    var s=stat(sc,k),has=sc.some(function(d){return d.t===k}),meta=T[k];
+    if(!has){
+      var reason=null;
+      if(k==='spr'&&!fls.some(c.spr))reason='해당 없음: 층 바닥면적('+at+')이 기준 '+R.spr+'㎡ 미만 (지하·무창·4층 이상 층 기준). 임의 설치 시 수평거리 2.3m 이하.';
+      if(k==='hyd'&&!fls.some(c.hyd))reason='해당 없음: 연면적 '+c.total+'㎡가 기준 '+R.hyd+'㎡ 미만이고 지하·4층 이상 층 바닥면적이 600㎡ 미만.';
+      if(k==='det'&&!c.auto)reason='자동화재탐지설비 대상 아님: 연면적 '+c.total+'㎡가 '+B.use+' 기준 '+c.thr.auto+'㎡ 미만. 단독경보형감지기를 권고합니다.';
+      if(!reason)return;
+      rows+='<div class="row"><div class="nm">'+meta.n+'<small>'+meta.rule+'</small></div><span class="num">0</span><span class="num">0</span><span class="badge na">해당 없음</span><div class="na-reason">'+reason+'</div></div>';
+      return;
+    }
+    var lab={ok:'충족',warn:'일부 부족',bad:'미설치',na:'권고만'}[s.st];
+    var chips=sc.filter(function(d){return d.t===k}).map(function(d){
+      return '<button class="chip '+(isOn(d)?'on':'off')+(d.basis==='권고'?' rec':'')+'" data-id="'+d.id+'" title="'+d.basis+'">'+(scope==='all'?'<span class="f">'+d.fk+'</span>':'')+(meta.s||'SP')+d.n+(isOn(d)?' ✓':' ✕')+(d.basis==='권고'?' 권고':'')+'</button>';
+    }).join('');
+    rows+='<div class="row"><div class="nm">'+meta.n+'<small>'+meta.rule+'</small></div><span class="num">'+s.req+'</span><span class="num">'+s.inst+(s.rec?'<small style="color:var(--mute)"> +'+s.recInst+'</small>':'')+'</span><span class="badge '+s.st+'">'+lab+'</span><div class="na-reason">위치: '+meta.where+'</div><div class="chips">'+chips+'</div></div>';
+  });
+  $('#rows').innerHTML=rows;
+}
+function api(devs){
+  var c=ctx(),t=totals(devs),up=c.fl.filter(function(f){return !f.b}).length,dn=c.fl.length-up;
+  return {
+    lot:B.lot,source:'sample register (건축HUB 연동 전 샘플 대장)',
+    register:{usage:B.use,floors_above:up,floors_below:dn,total_area_m2:c.total,building_height_m:B.heit},
+    summary:{required:t.req,installed:t.inst,missing:t.req-t.inst,rate:t.req?+(t.inst/t.req).toFixed(2):1},
+    rules:{auto_fire_alarm:c.auto,sprinkler_floors:c.fl.filter(c.spr).map(function(f){return f.key}),indoor_hydrant_floors:c.fl.filter(c.hyd).map(function(f){return f.key})},
+    floors:c.fl.map(function(f){return{floor:f.key,area_m2:f.area,use:f.use,floor_height_m:f.h,devices:devs.filter(function(d){return d.fk===f.key}).map(function(d){return{id:d.id,type:d.t,label:T[d.t].n,basis:d.basis,installed:isOn(d),x:d.rx,y:d.ry}})}})
+  };
+}
+function renderReg(){
+  var c=ctx(),up=c.fl.filter(function(f){return !f.b}).length,dn=c.fl.length-up;
+  $('#regmeta').innerHTML=[['지번 주소',B.lot],['주용도',B.use],['지상 / 지하',up+'층 / '+dn+'층'],['연면적',c.total.toLocaleString()+'㎡'],['표제부 높이',B.heit+'m']].map(function(x){return '<div><small>'+x[0]+'</small><b>'+esc(x[1])+'</b></div>'}).join('');
+  $('#ftb').innerHTML=fl().map(function(f){return '<tr><td><b class="mono">'+f.key+'</b></td><td class="mono">'+f.area.toLocaleString()+'</td><td>'+esc(f.use)+'</td><td><input type="number" step="0.1" min="2.4" max="8" value="'+f.h+'" data-h="'+f.key+'" aria-label="'+f.key+' 층고"></td></tr>'}).join('');
+  $('#lookNote').innerHTML=(looked?'<span class="stat src">샘플 대장</span> ':'')+'지번 주소·층별 면적·층별 용도는 대장 값이라 수정하지 않습니다. 층고는 대장에 층별 값이 없어 표제부 높이를 층수로 나눈 값으로 시작했고, 현장 실측값으로 고칠 수 있습니다.';
+}
+function render(){
+  if(!fcur())sel=(fl().filter(function(f){return f.key==='1F'})[0]||fl()[0]).key;
+  var devs=gen();
+  renderFloors(devs);renderPlan(devs);renderList(devs);
+  $('#json').textContent=JSON.stringify(api(devs),null,1);
+  $('#clickNote').textContent=role==='insp'?'핀이나 목록의 항목을 누르면 설치와 미설치가 바뀝니다. 현장에서 확인한 결과를 기록하는 방식입니다.':'운영자 화면에서는 기준값을 바꿔 수량을 다시 계산합니다. 설치 상태는 점검원 화면에서 기록합니다.';
+}
+function load(id,fromLookup){
+  B=REG.filter(function(b){return b.id===id})[0];
+  B.floors.forEach(function(f){if(f.h0==null)f.h0=f.h});
+  sel='1F';hl=null;looked=!!fromLookup;
+  $('#bsel').value=B.id;$('#lot').value=B.lot;
+  renderReg();render();
+}
+function toggle(id){
+  var d=gen().filter(function(x){return x.id===id})[0];if(!d)return;hl=id;
+  if(role==='insp')setOn(d,!isOn(d));render();
+}
+function bulk(v){
+  if(role!=='insp')return;
+  gen().filter(function(d){return scope==='all'||d.fk===sel}).forEach(function(d){if(d.basis==='법정')setOn(d,v)});render();
+}
+document.querySelector('#rv').addEventListener('click',function(e){
+  var el=e.target.closest('[data-id],[data-fk]');if(!el)return;
+  if(el.dataset.fk){sel=el.dataset.fk;hl=null;render();return}
+  toggle(el.dataset.id);
+});
+document.querySelector('#rv').addEventListener('keydown',function(e){if((e.key==='Enter'||e.key===' ')&&e.target.classList&&e.target.classList.contains('pin')){e.preventDefault();toggle(e.target.dataset.id)}});
+function seg(a,b,fn){[a,b].forEach(function(x){$(x).addEventListener('click',function(){fn(x===a);$(a).setAttribute('aria-pressed',x===a);$(b).setAttribute('aria-pressed',x===b)})})}
+seg('#rInsp','#rAdm',function(i){role=i?'insp':'adm';$('#rv').classList.toggle('is-admin',!i);render()});
+seg('#vMain','#vApi',function(m){$('#mainView').classList.toggle('hide',!m);$('#apiView').classList.toggle('hide',m)});
+seg('#scFloor','#scAll',function(f){scope=f?'floor':'all';render()});
+$('#allOn').addEventListener('click',function(){bulk(true)});
+$('#allOff').addEventListener('click',function(){bulk(false)});
+$('#bsel').innerHTML=REG.map(function(b){return '<option value="'+b.id+'">'+esc(b.name)+' · '+esc(b.use)+'</option>'}).join('');
+$('#lots').innerHTML=REG.map(function(b){return '<option value="'+esc(b.lot)+'">'}).join('');
+$('#bsel').addEventListener('change',function(){load($('#bsel').value,true)});
+$('#lookup').addEventListener('click',function(){
+  var v=$('#lot').value.trim().replace(/\s+/g,' '),hit=REG.filter(function(b){return b.lot===v||(v&&b.lot.indexOf(v)>=0)})[0];
+  if(!hit){$('#lookNote').innerHTML='<span class="stat src">조회 결과 없음</span> "'+esc(v)+'"는 샘플 대장에 없습니다. 목록의 지번을 선택하거나 등록된 건물에서 고르세요. 앱에서는 이 자리에서 건축HUB를 호출합니다.';return}
+  load(hit.id,true);
+});
+['rDet','rExt','rSpr','rHyd'].forEach(function(i){$('#'+i).addEventListener('change',function(){R.det=+$('#rDet').value||70;R.ext=+$('#rExt').value||200;R.spr=+$('#rSpr').value||1000;R.hyd=+$('#rHyd').value||3000;render()})});
+$('#ftb').addEventListener('change',function(e){var k=e.target.dataset&&e.target.dataset.h;if(!k)return;
+  var f=B.floors.filter(function(x){return x.key===k})[0],v=parseFloat(e.target.value);
+  f.h=isFinite(v)?Math.min(8,Math.max(2.4,v)):f.h0;e.target.value=f.h;render()});
+$('#copy').addEventListener('click',function(){var b=$('#copy'),t=$('#json').textContent;
+  function done(m){b.textContent=m;setTimeout(function(){b.textContent='복사'},1400)}
+  function sel2(){var r=document.createRange();r.selectNodeContents($('#json'));var s=getSelection();s.removeAllRanges();s.addRange(r);done('선택됨')}
+  if(navigator.clipboard&&navigator.clipboard.writeText)navigator.clipboard.writeText(t).then(function(){done('복사됨')},sel2);else sel2()});
+load('b1',true);
+})();
+</script>
+<script>
+(function(){
+function $(s){return document.querySelector(s)}
+function esc(s){return String(s).replace(/[&<>"]/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]})}
+var SCR={};G.forEach(function(g){g[1].forEach(function(s){SCR[s.id]=s})});
+var IDS=Object.keys(SCR);
+var DEF={
+ insp:{name:'점검원 · 하루 점검',scenes:[
+  {t:'출근길에 오늘 작업 확인',x:'이도윤 점검원이 호스트 앱에서 소방안전·점검을 열고 오늘 배정된 2건을 본다. 전송 대기 1건이 남아 있다.',s:'H1',n:'알림 딥링크로 J2 바로 진입 가능'},
+  {t:'건물 도착, 작업 열기',x:'푸른솔 상가 작업을 열어 설비 4종 중 미점검 항목을 확인한다.',s:'J2',n:''},
+  {t:'배치도로 설치 여부 확인',x:'층을 고르고 도면의 핀을 눌러 설치된 설비는 채움으로, 없는 설비는 점선으로 둔다. 부족 수량이 바로 보인다.',s:'B7',n:'지하 1층 주차장은 감지기 대상 여부가 다름'},
+  {t:'소화기 상태 점검',x:'안전핀, 호스 균열을 정상·보수필요·불량으로 표시한다. 보수필요면 사진이 필수다.',s:'J3',n:''},
+  {t:'사진 촬영',x:'외측 부식 부위를 촬영해 항목에 연결한다.',s:'J5',n:'호스트가 카메라를 막으면 파일 선택'},
+  {t:'서명하고 제출',x:'조치 필요 1건을 확인하고 서명한다. 제출하면 수정할 수 없다.',s:'J6',n:''},
+  {t:'지하에서 오프라인 제출',x:'신호가 없어 전송 대기에 쌓이고, 연결되면 자동으로 올라간다.',s:'J7',n:''}]},
+ ops:{name:'운영자 · 신규 건물과 보고',scenes:[
+  {t:'새 계약 건물 등록 시작',x:'최현우 운영자가 건물 목록에서 건물 등록을 연다.',s:'B1',n:''},
+  {t:'지번으로 대장 조회',x:'지번을 넣고 건축물대장을 조회한다. 지상·지하 층수, 층별 면적과 용도가 채워지고 층고만 현장 값으로 고친다.',s:'B5',n:'층고는 표제부 높이 ÷ 층수로 시작'},
+  {t:'배치 검토로 필수 수량 계산',x:'층별 필수 설비 수량과 권장 위치를 도면과 목록으로 본다. 기준값은 운영자가 바꾼다.',s:'B7',n:'설계 확정은 전문가·소방서 확인'},
+  {t:'계약과 점검 주기 설정',x:'월 1회 작동점검, 기한 3일 전 알림을 정한다.',s:'B4',n:''},
+  {t:'첫 작업 배정',x:'작업을 만들고 담당자를 고르면 점검원에게 알림이 간다.',s:'J8',n:''},
+  {t:'보고서 확인 후 발송',x:'제출된 점검의 조치 필요 항목을 확인하고 건물주에게 링크를 보낸다.',s:'R2',n:''},
+  {t:'건물주 열람',x:'건물주는 로그인 없이 링크로 결과를 보고 조치 요청을 남긴다.',s:'O1',n:'링크는 7일 후 만료'}]}
+};
+var KEY='sb-v1',cur='insp',S=null;
+function clone(o){return JSON.parse(JSON.stringify(o))}
+function load(){var d=clone(DEF);try{var v=JSON.parse(localStorage.getItem(KEY)||'null');if(v)Object.keys(v).forEach(function(k){if(d[k]&&Array.isArray(v[k]))d[k].scenes=v[k]})}catch(e){}S=d}
+function save(){try{var o={};Object.keys(S).forEach(function(k){o[k]=S[k].scenes});localStorage.setItem(KEY,JSON.stringify(o))}catch(e){}}
+function thumb(id){var s=SCR[id];if(!s)return '<div class="sb-thumb none">연결 화면 없음</div>';
+  return '<div class="sb-thumb"><div class="wf"><div class="phone">'+s.u.map(r).join('')+'</div></div></div>'}
+function draw(){
+  $('#sbtabs').innerHTML=Object.keys(S).map(function(k){return '<button data-tab="'+k+'" aria-pressed="'+(k===cur)+'">'+S[k].name+'</button>'}).join('');
+  var sc=S[cur].scenes;
+  $('#sbrow').innerHTML=sc.map(function(f,i){
+    return '<div class="frame" data-i="'+i+'"><div class="hd"><span class="no">장면 '+(i+1)+' / '+sc.length+'</span><span class="tools"><button data-a="left" title="앞으로" aria-label="앞으로 이동"'+(i===0?' disabled':'')+'>◀</button><button data-a="right" title="뒤로" aria-label="뒤로 이동"'+(i===sc.length-1?' disabled':'')+'>▶</button><button data-a="dup" title="복제" aria-label="복제">⧉</button><button class="del" data-a="del" title="삭제" aria-label="삭제">✕</button></span></div>'
+     +thumb(f.s)
+     +'<label>제목<input class="ttl" data-f="t" value="'+esc(f.t)+'"></label>'
+     +'<label>상황과 행동<textarea data-f="x">'+esc(f.x)+'</textarea></label>'
+     +'<label>연결 화면<select data-f="s"><option value="">(없음)</option>'+IDS.map(function(id){return '<option value="'+id+'"'+(id===f.s?' selected':'')+'>'+id+' · '+esc(SCR[id].t)+'</option>'}).join('')+'</select></label>'
+     +'<label>메모<input data-f="n" value="'+esc(f.n)+'"></label></div>';
+  }).join('')+'<button class="sbadd" data-a="add">+ 장면 추가</button>';
+}
+$('#sbtabs').addEventListener('click',function(e){var b=e.target.closest('[data-tab]');if(b){cur=b.dataset.tab;draw()}});
+$('#sbrow').addEventListener('input',function(e){var fr=e.target.closest('.frame');if(!fr||!e.target.dataset.f)return;
+  var i=+fr.dataset.i,f=e.target.dataset.f;S[cur].scenes[i][f]=e.target.value;save();
+  if(f==='s'){var th=fr.querySelector('.sb-thumb');var tmp=document.createElement('div');tmp.innerHTML=thumb(e.target.value);th.replaceWith(tmp.firstChild)}});
+$('#sbrow').addEventListener('click',function(e){var b=e.target.closest('[data-a]');if(!b)return;
+  var sc=S[cur].scenes,fr=b.closest('.frame'),i=fr?+fr.dataset.i:sc.length,a=b.dataset.a;
+  if(a==='add')sc.push({t:'새 장면',x:'',s:'',n:''});
+  if(a==='dup')sc.splice(i+1,0,clone(sc[i]));
+  if(a==='del'){if(sc.length>1)sc.splice(i,1)}
+  if(a==='left'&&i>0){var t=sc[i];sc[i]=sc[i-1];sc[i-1]=t}
+  if(a==='right'&&i<sc.length-1){var t2=sc[i];sc[i]=sc[i+1];sc[i+1]=t2}
+  save();draw();
+  if(a==='add'){var row=$('#sbrow');row.scrollLeft=row.scrollWidth}});
+$('#sbReset').addEventListener('click',function(){S[cur].scenes=clone(DEF[cur].scenes);save();draw()});
+$('#sbCopy').addEventListener('click',function(){var b=$('#sbCopy');
+  var t=S[cur].name+'\n\n'+S[cur].scenes.map(function(f,i){return (i+1)+'. '+f.t+(f.s?' ['+f.s+']':'')+'\n   '+f.x+(f.n?'\n   메모: '+f.n:'')}).join('\n');
+  function done(m){b.textContent=m;setTimeout(function(){b.textContent='텍스트로 복사'},1400)}
+  var ta=document.createElement('textarea');ta.value=t;ta.style.cssText='position:fixed;opacity:0';document.body.appendChild(ta);
+  function fb(){ta.select();try{document.execCommand('copy');done('복사됨')}catch(x){done('복사 실패')}ta.remove()}
+  if(navigator.clipboard&&navigator.clipboard.writeText)navigator.clipboard.writeText(t).then(function(){ta.remove();done('복사됨')},fb);else fb()});
+load();draw();
+})();
+</script>
+
+</body></html>
