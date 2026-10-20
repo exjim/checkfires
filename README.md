@@ -80,5 +80,5 @@ python3 -m http.server 8080   # http://localhost:8080  (로컬 모드)
 건물 관리 → 건물 등록 화면 맨 위 "건축물대장에서 찾기"에서 도로명+번지, 동+지번, 건물명으로 검색해 선택하면 이름·주소·주 용도·층수·층별 면적(연면적÷층수 추정)이 채워집니다. 데이터는 `ledger.b64`(약 8MB, 근린생활·판매·업무·숙박·위락·문화집회·운동·의료·관광휴게 시설이 있는 대지 148,368곳)이며 처음 검색할 때만 내려받습니다. 좌표는 OpenStreetMap(Nominatim) 검색값으로 근사 입력하므로 현장에서 보정해야 합니다. 건물주 계정은 대장에 없어 수동 선택입니다.
 
 ## 폰 앱 (`/m/`)과 조회 서버 (`functions/`)
-- `m/index.html` — 와이어프레임 구성을 따른 휴대폰용 앱. `https://checkfires.web.app/m/`에서 열고, 기존 체크파이어 계정(아이디/비밀번호)으로 로그인한다. 점검 데이터는 아직 기기에만 저장된다(Firestore 이전은 다음 단계).
+- `m/index.html` — 와이어프레임 구성을 따른 휴대폰용 앱. `https://checkfires.web.app/m/`에서 열고, 기존 체크파이어 계정(아이디/비밀번호)으로 로그인한다. 점검 데이터는 Firestore의 `mbuildings`·`mjobs`·`mreports`·`mphotos`·`mmeta` 컬렉션에 저장된다(기존 체크파이어 컬렉션과 분리). 사진은 문서 크기 제한 때문에 설비별 `mphotos` 문서로 따로 저장하고, 작업·보고서에는 장수만 둔다. 오프라인에서는 Firestore 로컬 캐시가 쓰기를 쌓았다가 연결되면 전송한다. 보안 규칙은 `firestore.rules`, 시험은 `tests/rules.test.js`(에뮬레이터 필요).
 - `functions/` — 주소 검색(도로명주소 API)과 건축물대장(건축HUB) 조회 서버. 설치·키 등록·배포는 `functions/README.md`. 키는 앱이 아니라 Functions 비밀값에 둔다.
