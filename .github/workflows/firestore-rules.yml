@@ -18,4 +18,9 @@ jobs:
         run: |
           printf '%s' "$SA_JSON" > "$RUNNER_TEMP/sa.json"
           export GOOGLE_APPLICATION_CREDENTIALS="$RUNNER_TEMP/sa.json"
-          npx -y firebase-tools@13 deploy --only firestore:rules --project checkfires --non-interactive
+          set +e
+          OUT=$(npx -y firebase-tools@13 deploy --only firestore:rules --project checkfires --non-interactive 2>&1)
+          RC=$?
+          echo "$OUT"
+          MSG=$(echo "$OUT" | grep -iE "error|denied|permission|403|not found|disabled" | head -5 | tr '\n' ' ' | sed 's/%/%25/g')
+          if [ $RC -ne 0 ]; then echo "::error title=RULES_DEPLOY_FAILED::${MSG:-$(echo "$OUT" | tail -3 | tr '\n' ' ')}"; exit 1; fi
