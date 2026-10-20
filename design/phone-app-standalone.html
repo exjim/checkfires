@@ -1,6 +1,6 @@
 <!doctype html>
 <html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>소방점검 앱</title>
+<title>소방안전점검</title>
 
 <meta name="theme-color" content="#23262b">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -74,7 +74,7 @@ td input{min-height:36px;padding:4px 8px;width:80px;font-size:15px}
 .toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(76px + env(safe-area-inset-bottom,0px));background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:10px;font-size:14px;z-index:60;max-width:90vw}
 .offbar{background:var(--ink);color:var(--bg);text-align:center;font-size:12.5px;padding:5px;margin-inline:calc(-1*max(16px,env(safe-area-inset-left,0px)))}
 .hero{display:grid;gap:10px;padding-top:20px}
-.hero .logo{width:56px;height:56px;border-radius:14px;background:var(--blue);display:grid;place-items:center;color:#fff;font-weight:900;font-size:26px}
+.hero .logo{width:60px;height:60px;border-radius:16px;background:var(--blue);display:grid;place-items:center}.hero .logo svg{width:34px;height:34px;fill:#fff}
 .cal{font-size:12.5px}
 /* 배치 검토 */
 .meta{display:grid;grid-template-columns:1fr 1fr;gap:6px}.meta div{background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:6px 9px}.meta small{display:block;font-size:11.5px;color:var(--mute)}.meta b{font-size:13.5px;overflow-wrap:anywhere}
@@ -197,15 +197,16 @@ function listen(q,kind){var cn=COLL[kind];UNSUBS.push(q.onSnapshot({includeMetad
   if(i>=0)ST[kind][i]=data;else ST[kind].push(data);
   SY[cn][id]=cj(toDoc(kind,data));
   if(kind==='jobs'&&data.who&&data.whoName)NAMES[data.who]=data.whoName;if(kind==='reports'&&data.by&&data.byName)NAMES[data.by]=data.byName});
- ST.jobs.sort(function(a,b){return a.date<b.date?-1:1});render()},function(err){FBS.err='데이터를 불러오지 못했습니다 ('+(err.code||err.message)+')';toast(FBS.err)}))}
-function attach(){var uid=ST.uid,op=isOp();detach();
+ ST.jobs.sort(function(a,b){return a.date<b.date?-1:1});render()},function(err){syncErr(err)}))}
+function syncErr(err){var c=err&&err.code;UI.syncErr=c==='permission-denied'?'서버 보안 규칙이 아직 적용되지 않았거나 이 계정에 권한이 없습니다. 관리자에게 규칙 배포를 요청하세요. (permission-denied)':'데이터를 불러오지 못했습니다 ('+(c||(err&&err.message)||'오류')+')';render()}
+function attach(){UI.syncErr='';var uid=ST.uid,op=isOp();detach();
  listen(DB.collection('mbuildings'),'buildings');
  listen(op?DB.collection('mjobs'):DB.collection('mjobs').where('who','==',uid),'jobs');
  listen(op?DB.collection('mreports'):DB.collection('mreports').where('by','==',uid),'reports');
  UNSUBS.push(DB.collection('mmeta').doc('settings').onSnapshot(function(d){if(!d.exists)return;var x=d.data();if(x.rules)ST.rules=Object.assign({},ST.rules,x.rules);if(x.org_info)ST.org_info=Object.assign({},ST.org_info,x.org_info);ST.jusoKey=x.jusoKey||'';SETSY=cj({rules:ST.rules,org_info:ST.org_info,jusoKey:ST.jusoKey||''});render()},function(){}));
  if(op)UNSUBS.push(DB.collection('users').onSnapshot(function(snap){ST.staff=[];snap.forEach(function(d){var u=d.data();if(!u.active||(u.role!=='admin'&&u.role!=='inspector'))return;NAMES[u.uid]=u.name;ST.staff.push({id:u.uid,name:u.name,role:u.role==='admin'?'operator':'inspector',tel:u.phone||''})});render()},function(){}))}
 function detach(){UNSUBS.forEach(function(f){try{f()}catch(e){}});UNSUBS=[]}
-function clearData(){detach();ST.buildings=[];ST.jobs=[];ST.reports=[];ST.queue=[];ST.staff=[];SY={mbuildings:{},mjobs:{},mreports:{}};PHSY={};PEND={};SETSY=''}
+function clearData(){detach();UI.syncErr='';ST.buildings=[];ST.jobs=[];ST.reports=[];ST.queue=[];ST.staff=[];SY={mbuildings:{},mjobs:{},mreports:{}};PHSY={};PEND={};SETSY=''}
 
 /* ---------- 로그인 (체크파이어와 같은 Firebase 계정: 아이디@checkfires.app) ---------- */
 var FBON=/\.(web\.app|firebaseapp\.com)$/.test(location.hostname);
@@ -304,11 +305,11 @@ function jobCard(j){var b=bld(j.bld),p=prog(j),st=jobState(j);return'<button cla
 
 /* ---------- 화면 ---------- */
 var V={};
-V.E1=function(){return{bare:1,html:'<div class="hero"><div class="logo">소</div><h2>소방안전·점검</h2><p class="mute" style="margin:0">호스트 계정으로 시작합니다. 점검 작업과 보고서는 소속 업체 단위로 나뉩니다.</p></div>'
+V.E1=function(){return{bare:1,html:'<div class="hero"><div class="logo" role="img" aria-label="소방안전점검"><svg viewBox="0 0 24 24"><path d="M12.5 2c.7 3.6 4.6 5.4 4.6 10.2A5.1 5.1 0 0 1 12 17.3a5.1 5.1 0 0 1-5.1-5.1c0-2 1-3.5 2.3-4.7.1 1.8.9 2.9 2 3.3-.5-3.5-.2-6.2 1.3-8.8zM12 19.3c2.9 0 5.2-1.1 6.6-2.7.6 3-1.9 5.4-6.6 5.4s-7.2-2.4-6.6-5.4c1.4 1.6 3.7 2.7 6.6 2.7z"/></svg></div><h2>소방안전점검</h2><p class="mute" style="margin:0">호스트 계정으로 시작합니다. 점검 작업과 보고서는 소속 업체 단위로 나뉩니다.</p></div>'
  +'<div class="card"><div class="small mute">호스트 앱에서 제공하는 정보</div><div style="margin-top:4px"><b>이름, 소속, 연락처</b></div></div>'
  +'<button class="chk" data-act="consent" role="checkbox" aria-checked="'+!!UI.consent+'"><i>'+(UI.consent?'✓':'')+'</i>개인정보 제공에 동의합니다</button>'
  +'<button class="btn blue" data-act="e1next"'+(UI.consent?'':' disabled')+'>시작하기</button>'}};
-V.L1=function(){var h='<div class="hero"><div class="logo">소</div><h2>로그인</h2><p class="mute" style="margin:0">관리자가 만들어 준 아이디로 로그인합니다.</p></div>';
+V.L1=function(){var h='<div class="hero"><div class="logo" role="img" aria-label="소방안전점검"><svg viewBox="0 0 24 24"><path d="M12.5 2c.7 3.6 4.6 5.4 4.6 10.2A5.1 5.1 0 0 1 12 17.3a5.1 5.1 0 0 1-5.1-5.1c0-2 1-3.5 2.3-4.7.1 1.8.9 2.9 2 3.3-.5-3.5-.2-6.2 1.3-8.8zM12 19.3c2.9 0 5.2-1.1 6.6-2.7.6 3-1.9 5.4-6.6 5.4s-7.2-2.4-6.6-5.4c1.4 1.6 3.7 2.7 6.6 2.7z"/></svg></div><h2>소방안전점검</h2><p class="mute" style="margin:0">관리자가 만들어 준 아이디로 로그인합니다.</p></div>';
  if(FBS.st==='init')return{bare:1,html:h+'<div class="notice">서버에 연결하는 중…</div>'};
  if(FBS.st==='err')return{bare:1,html:h+'<div class="notice r">'+esc(FBS.err)+'</div><button class="btn ghost" data-act="reload">다시 시도</button>'};
  return{bare:1,html:h+(FBS.err?'<div class="notice r">'+esc(FBS.err)+'</div>':'')+'<label class="f">아이디<input id="lid" autocomplete="username" autocapitalize="off" autocorrect="off" spellcheck="false" value="'+esc(FBS.lid)+'"></label><label class="f">비밀번호<input id="lpw" type="password" autocomplete="current-password"></label><button class="btn blue" data-act="login"'+(FBS.busy?' disabled':'')+'>'+(FBS.busy?'확인 중…':'로그인')+'</button>'}};
@@ -468,7 +469,7 @@ function render(){
  if(scr.bare){h='<main style="padding-top:20px">'+scr.html+'</main>'}
  else{
   h=(ST.offline||!navigator.onLine?'<div class="offbar">오프라인 · 기기에 저장 중</div>':'')
-   +'<header class="appbar">'+((scr.back||stack.length>0)&&!rt?'<button class="bk" data-act="back" aria-label="뒤로">←</button>':'<span style="width:10px"></span>')+'<h1>'+esc(scr.title||'')+'</h1>'+(qlist().length?'<button class="pill p-a" style="border:0;cursor:pointer" data-go="J7">대기 '+qlist().length+'</button>':'')+'</header><main>'+scr.html+'</main>'
+   +'<header class="appbar">'+((scr.back||stack.length>0)&&!rt?'<button class="bk" data-act="back" aria-label="뒤로">←</button>':'<span style="width:10px"></span>')+'<h1>'+esc(scr.title||'')+'</h1>'+(qlist().length?'<button class="pill p-a" style="border:0;cursor:pointer" data-go="J7">대기 '+qlist().length+'</button>':'')+'</header><main>'+(UI.syncErr?'<div class="notice r">'+esc(UI.syncErr)+'</div>':'')+scr.html+'</main>'
    +'<nav class="tabbar" aria-label="하단 탭">'+[['home','홈'],['work','작업'],['bld','건물'],['rep','보고서'],['more','더보기']].map(function(x){return'<button data-act="tab" data-v="'+x[0]+'"'+(ST.tab===x[0]?' aria-current="page"':'')+'><svg viewBox="0 0 24 24">'+I[x[0]]+'</svg>'+x[1]+'</button>'}).join('')+'</nav>'}
  if(entry&&stack.length&&stack[stack.length-1].s==='E3')h=h.replace('<main style="padding-top:20px">','<main style="padding-top:20px"><button class="btn ghost sm" data-act="back" style="margin-bottom:6px">← 돌아가기</button>');
  var sc=window.scrollY;
