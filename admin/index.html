@@ -1,0 +1,1031 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#23262b">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="소방점검">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<style>body{margin:0}</style>
+<title>소방점검 통합 웹앱</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700;900&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: 상단 역할 전환 → [사용자] ①고지(법정 비치 기준) ②층별 점검 ③리포트 제출 / [관리자] 모니터링 · 리포트 · 기준 */
+:root{--bg:#f6f7f9;--surface:#fff;--ink:#23262b;--mute:#6a7078;--line:#dfe3e8;--blue:#286ef0;--blue-soft:#e8f0fe;--red:#d93a3a;--red-soft:#fdecec;--amber:#b7791f;--amber-soft:#fdf3dc;--green:#1a8a5a;--green-soft:#e2f5ec;--wire:#e9ecf0;--grey:#b9c0c9;--slab:rgba(255,255,255,.72);--slab-edge:#9aa4b0;--stage:#e4e8ee;
+--sans:'Noto Sans KR',system-ui,sans-serif;--mono:'IBM Plex Mono',ui-monospace,monospace}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#14171b;--surface:#1c2025;--ink:#e8eaee;--mute:#9aa1ab;--line:#2f353c;--blue:#6b9bff;--blue-soft:#1d2a47;--red:#ff7b7b;--red-soft:#3a2023;--amber:#e6b758;--amber-soft:#3a3120;--green:#4cc38a;--green-soft:#1b3328;--wire:#262b31;--grey:#4a525c;--slab:rgba(40,46,54,.78);--slab-edge:#5b6672;--stage:#101317;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#14171b;--surface:#1c2025;--ink:#e8eaee;--mute:#9aa1ab;--line:#2f353c;--blue:#6b9bff;--blue-soft:#1d2a47;--red:#ff7b7b;--red-soft:#3a2023;--amber:#e6b758;--amber-soft:#3a3120;--green:#4cc38a;--green-soft:#1b3328;--wire:#262b31;--grey:#4a525c;--slab:rgba(40,46,54,.78);--slab-edge:#5b6672;--stage:#101317;color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--sans);font-size:15px;line-height:1.6;padding-block:0 60px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.wrap{max-width:1120px;margin-inline:auto}
+header.top{padding-block:22px 10px;display:flex;flex-wrap:wrap;gap:10px 20px;align-items:center;justify-content:space-between}
+header.top h1{font-size:clamp(20px,3.4vw,28px);line-height:1.25;margin:0;font-weight:900;text-wrap:balance}
+.kick{font:500 11.5px var(--mono);letter-spacing:.08em;color:var(--mute);text-transform:uppercase}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:10px;overflow:hidden;background:var(--surface)}
+.seg button{border:0;background:transparent;color:var(--mute);font:500 14px var(--sans);padding:9px 16px;cursor:pointer;min-height:40px}
+.seg button[aria-pressed="true"]{background:var(--ink);color:var(--bg)}
+.steps{display:flex;gap:6px;overflow-x:auto;border-bottom:1px solid var(--line);padding-block:8px;position:sticky;top:env(safe-area-inset-top,0px);background:var(--bg);z-index:20;margin-inline:-16px;padding-inline:16px}
+.steps button{flex:none;border:0;background:transparent;color:var(--mute);font:500 14px var(--sans);padding:9px 14px;border-radius:8px;cursor:pointer;min-height:40px}
+.steps button[aria-current="step"]{background:var(--ink);color:var(--bg)}
+.steps button:disabled{opacity:.4;cursor:not-allowed}
+main{padding-top:18px;display:grid;gap:16px}
+h2{font-size:21px;margin:0 0 4px;font-weight:900;text-wrap:balance}
+h3{font-size:15.5px;margin:0 0 8px}
+.lead{color:var(--mute);margin:0 0 6px;max-width:76ch;font-size:14.5px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:16px;min-width:0}
+.grid{display:grid;gap:14px}.g2{grid-template-columns:repeat(auto-fit,minmax(300px,1fr))}.g4{grid-template-columns:repeat(auto-fit,minmax(150px,1fr))}
+.notice{border-left:3px solid var(--amber);background:var(--amber-soft);padding:12px 14px;border-radius:0 8px 8px 0;font-size:14px}
+.notice.blue{border-color:var(--blue);background:var(--blue-soft)}
+.notice.red{border-color:var(--red);background:var(--red-soft)}
+.tw{overflow-x:auto;border:1px solid var(--line);border-radius:10px;background:var(--surface)}
+table{border-collapse:collapse;width:100%;font-size:13.5px}
+th,td{text-align:left;padding:9px 11px;border-bottom:1px solid var(--line);vertical-align:top}
+th{font:500 11px var(--mono);letter-spacing:.05em;text-transform:uppercase;color:var(--mute);background:var(--bg);white-space:nowrap}
+tr:last-child td{border-bottom:0}
+td.c,th.c{text-align:center}
+input[type=number],select,textarea{font:inherit;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:7px 9px;min-height:38px;max-width:100%}
+input[type=number]{width:92px}
+textarea{width:100%;min-height:56px;resize:vertical}
+label.cb{display:flex;gap:8px;align-items:flex-start;font-size:14px}
+label.cb input{margin-top:5px;width:18px;height:18px;flex:none}
+.pill{display:inline-block;font:500 11px var(--mono);padding:2px 8px;border-radius:99px;white-space:nowrap}
+.p-ok{background:var(--green-soft);color:var(--green)}.p-warn{background:var(--amber-soft);color:var(--amber)}.p-bad{background:var(--red-soft);color:var(--red)}.p-no{background:var(--wire);color:var(--mute)}.p-blue{background:var(--blue-soft);color:var(--blue)}
+.btn{border:0;background:var(--ink);color:var(--bg);border-radius:9px;padding:10px 16px;font:700 14px var(--sans);cursor:pointer;min-height:42px}
+.btn.bad{background:var(--red);color:#fff;border:1px solid var(--red)}
+.btn.ghost{background:transparent;color:var(--ink);border:1px solid var(--line)}
+.btn.blue{background:var(--blue);color:#fff}
+.btn.sm{padding:6px 10px;min-height:34px;font-size:13px}
+.btn:disabled{opacity:.4;cursor:not-allowed}
+.row{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+.sp{flex:1}
+.mx td.n{text-align:center;font-weight:700;white-space:nowrap}
+.mx td.na{text-align:center;color:var(--mute);background:var(--bg);font-size:12px}
+.ins{display:grid;grid-template-columns:minmax(0,230px) minmax(0,1fr);gap:16px;align-items:start}
+@media(max-width:860px){.ins{grid-template-columns:minmax(0,1fr)}}
+.side{display:grid;gap:12px;position:sticky;top:64px}
+@media(max-width:860px){.side{position:static}}
+.iso{width:100%;max-width:230px;margin-inline:auto;display:block}
+.iso polygon{cursor:pointer;stroke-width:1.5}
+.fl-list{display:grid;gap:6px}
+.fl-list button{display:grid;grid-template-columns:34px 1fr auto;gap:8px;align-items:center;text-align:left;border:1px solid var(--line);background:var(--bg);color:var(--ink);border-radius:8px;padding:8px 10px;font:inherit;font-size:13px;cursor:pointer}
+.fl-list button[aria-pressed="true"]{border-color:var(--blue);background:var(--blue-soft)}
+.bar{height:5px;background:var(--wire);border-radius:3px;overflow:hidden;margin-top:3px}.bar i{display:block;height:100%;background:var(--green)}
+.item{border:1px solid var(--line);border-radius:12px;background:var(--surface);overflow:hidden}
+.item.na{opacity:.6}
+.item>header{display:flex;flex-wrap:wrap;gap:6px 10px;align-items:center;padding:12px 14px;border-bottom:1px solid var(--line);background:var(--bg)}
+.item>header b{font-size:15px}
+.item .body{padding:12px 14px;display:grid;gap:10px}
+.qrow{display:flex;flex-wrap:wrap;gap:8px 12px;align-items:center}
+.ck{border:1px solid var(--line);border-radius:9px;padding:8px 10px}
+.ck .q{font-size:13.5px;margin-bottom:6px;display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.opts{display:flex;gap:6px}
+.opts button{flex:1;border:1px solid var(--line);background:var(--bg);color:var(--mute);border-radius:7px;padding:6px 4px;font:500 13px var(--sans);cursor:pointer;min-height:36px}
+.opts button[aria-pressed="true"].o1,.opts button[aria-pressed="true"].y{background:var(--green-soft);border-color:var(--green);color:var(--green)}
+.opts button[aria-pressed="true"].o2{background:var(--amber-soft);border-color:var(--amber);color:var(--amber)}
+.opts button[aria-pressed="true"].o3,.opts button[aria-pressed="true"].n{background:var(--red-soft);border-color:var(--red);color:var(--red)}
+.opts button:disabled{opacity:.45;cursor:not-allowed}
+.photos{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.ph{position:relative;width:74px;height:74px;border-radius:8px;overflow:hidden;border:1px solid var(--line);background:var(--wire)}
+.ph img{width:100%;height:100%;object-fit:cover;display:block;cursor:zoom-in}
+.ph button{position:absolute;top:2px;right:2px;width:22px;height:22px;border:0;border-radius:50%;background:rgba(0,0,0,.6);color:#fff;cursor:pointer;font-size:13px;line-height:1}
+.addph{display:inline-flex;gap:6px;flex-wrap:wrap}
+.addph label{cursor:pointer}
+.small{font-size:12.5px;color:var(--mute)}
+.kpi{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:12px 14px}
+.kpi b{display:block;font-size:26px;line-height:1.15}.kpi span{font-size:12.5px;color:var(--mute)}
+.heat{display:inline-block;min-width:46px;text-align:center;font:700 12px var(--mono);padding:4px 6px;border-radius:6px}
+.h-ok{background:var(--green-soft);color:var(--green)}.h-warn{background:var(--amber-soft);color:var(--amber)}.h-bad{background:var(--red-soft);color:var(--red)}.h-no{background:var(--wire);color:var(--mute)}.h-prog{background:var(--blue-soft);color:var(--blue)}
+.list{display:grid;gap:8px}
+.lrow{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;align-items:center;border:1px solid var(--line);background:var(--surface);border-radius:10px;padding:10px 12px;text-align:left;font:inherit;color:inherit;cursor:pointer;width:100%}
+.lrow[aria-pressed="true"]{border-color:var(--blue);background:var(--blue-soft)}
+.dfx{display:grid;gap:8px}
+.df{border:1px solid var(--line);border-radius:10px;padding:10px 12px;background:var(--surface)}
+.lb{position:fixed;inset:0;background:rgba(0,0,0,.8);display:grid;place-items:center;z-index:100;padding:20px}
+.lb img{max-width:100%;max-height:86vh;border-radius:10px;background:#fff}
+.lb button{position:fixed;top:max(14px,env(safe-area-inset-top,0px));right:16px}
+.legend{display:flex;flex-wrap:wrap;gap:8px 14px;font-size:12.5px;color:var(--mute)}
+.legend i{display:inline-block;width:11px;height:11px;border-radius:3px;margin-right:5px;vertical-align:-1px}
+.tag{font:500 10.5px var(--mono);color:var(--mute);border:1px solid var(--line);border-radius:5px;padding:0 5px}
+
+.v3{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,1fr);gap:16px;align-items:start}
+@media(max-width:900px){.v3{grid-template-columns:minmax(0,1fr)}}
+.ctl{display:flex;flex-wrap:wrap;gap:8px 12px;align-items:center;margin-bottom:10px;font-size:13px}
+.ctl label{display:inline-flex;gap:6px;align-items:center;color:var(--mute)}
+.ctl input[type=range]{width:100px}
+.chip{border:1px solid var(--line);background:var(--bg);color:var(--mute);border-radius:99px;padding:5px 11px;font:500 12.5px var(--sans);cursor:pointer;min-height:32px}
+.chip[aria-checked="true"]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.stage{position:relative;height:440px;background:var(--stage);border:1px solid var(--line);border-radius:12px;overflow:hidden;perspective:1400px;touch-action:none;cursor:grab;user-select:none}
+@media(max-width:520px){.stage{height:340px}}
+.stage .hint{position:absolute;left:10px;bottom:8px;font:500 11px var(--mono);color:var(--mute);z-index:5;pointer-events:none}
+.scene{position:absolute;left:50%;top:52%;width:0;height:0;transform-style:preserve-3d;transform:scale(var(--sc,1)) rotateX(var(--rx,58deg)) rotateZ(var(--rz,-35deg))}
+.fl{position:absolute;left:-150px;top:-100px;width:300px;height:200px;transform-style:preserve-3d;background:var(--slab);border:2px solid var(--slab-edge);border-radius:6px;transition:transform .35s,background .2s,border-color .2s}
+.fl.sel{border-color:var(--blue);box-shadow:0 0 0 3px var(--blue-soft)}
+.fl.dim{background:transparent;border-color:var(--line);border-style:dashed}
+.fl .rm{position:absolute;border:1.5px solid var(--slab-edge)}
+.fl.dim .rm{border-color:var(--line)}
+.fl .stc{position:absolute;right:8px;top:8px;width:34px;height:56px;border:1.5px solid var(--slab-edge);background:repeating-linear-gradient(0deg,var(--slab-edge) 0 1px,transparent 1px 7px);opacity:.7}
+.fl .fn{position:absolute;left:-46px;top:6px;font:700 13px var(--mono);color:var(--ink);transform:rotateZ(35deg);transform-origin:left top;white-space:nowrap}
+.fl.dim .fn{color:var(--mute)}
+.mk{position:absolute;width:28px;height:28px;margin:0;padding:0;border-radius:50%;border:2.5px solid var(--slab-edge);background:var(--surface);color:var(--ink);font:700 11px var(--sans);display:grid;place-items:center;cursor:pointer;transform:translate3d(-50%,-50%,14px) rotateZ(calc(var(--rz,-35deg)*-1)) rotateX(calc(var(--rx,58deg)*-1));box-shadow:0 2px 0 rgba(0,0,0,.18)}
+.mk.s-ok{border-color:var(--green);background:var(--green-soft);color:var(--green)}
+.mk.s-warn{border-color:var(--amber);background:var(--amber-soft);color:var(--amber)}
+.mk.s-bad{border-color:var(--red);background:var(--red-soft);color:var(--red)}
+.mk.cur{outline:3px solid var(--blue);outline-offset:2px}
+.mk.off{opacity:.4}
+.item.focus{outline:3px solid var(--blue);outline-offset:2px}
+.board{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:10px}
+.col{background:var(--bg);border:1px dashed var(--grey);border-radius:10px;padding:10px;display:grid;gap:8px;align-content:start;min-height:140px}
+.tk{background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:8px 10px;display:grid;gap:4px}
+.tk.req{border-color:var(--amber)}
+.sm-cols{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px}
+.card.newc{border-color:var(--blue)}
+.ul{list-style:none;margin:0;padding:0;display:grid;gap:4px;font-size:13.5px}
+input[type=text],input[type=password],input[type=date],input[type=tel]{font:inherit;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:7px 10px;min-height:42px;width:100%;max-width:100%}
+input:focus-visible,select:focus-visible,textarea:focus-visible,button:focus-visible{outline:2px solid var(--blue);outline-offset:2px}
+.fld{display:grid;gap:4px;font-size:13px;color:var(--mute);min-width:0}
+.fld>span{font-weight:500}
+.fgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px}
+.login{max-width:420px;margin:28px auto 0;display:grid;gap:14px}
+.login h2{margin:0}
+.msg{font-size:13.5px;padding:9px 12px;border-radius:8px;background:var(--red-soft);color:var(--red)}
+.msg.ok{background:var(--green-soft);color:var(--green)}
+.msg.info{background:var(--blue-soft);color:var(--blue)}
+.ubar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;font-size:13px}
+.ubar b{font-size:14px}
+.sigpad{display:block;width:100%;max-width:420px;height:130px;touch-action:none;border:1px dashed var(--grey);border-radius:8px;background:#fff;cursor:crosshair}
+.banner{padding:8px 12px;font-size:12.5px;border-radius:8px;background:var(--amber-soft);color:var(--amber);margin-top:6px}
+.tk .row{gap:6px}
+code{font-family:var(--mono);font-size:12.5px}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header class="top">
+  <div><div class="kick">Faircode · 소방안전 점검</div><h1>소방점검 통합 웹앱</h1></div>
+  <div class="ubar" id="userbar"></div>
+</header>
+<nav class="steps" id="steps" aria-label="메뉴"></nav>
+<main id="view"></main>
+</div>
+<div id="lbx"></div>
+<script>
+(function(){
+'use strict';
+const $=s=>document.querySelector(s);
+const esc=s=>String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const clone=x=>JSON.parse(JSON.stringify(x));
+const pad=x=>String(x).padStart(2,'0');
+const rnd=()=>Math.random().toString(36).slice(2,6);
+const today=()=>{const n=new Date();return n.getFullYear()+'-'+pad(n.getMonth()+1)+'-'+pad(n.getDate())};
+const stamp=()=>{const n=new Date();return pad(n.getMonth()+1)+'/'+pad(n.getDate())+' '+pad(n.getHours())+':'+pad(n.getMinutes())};
+const ROLES={inspector:'점검자',admin:'관리자',owner:'건물주'};
+const RKEY={inspector:'user',admin:'admin',owner:'owner'};
+const ID_RE=/^[a-z0-9._-]{3,20}$/;
+
+/* ================= 데이터 계층 =================
+   Firebase(Auth+Firestore)가 연결되면 서버에 저장하고, 연결이 없으면(로컬 실행 등) 이 기기 안에만 저장합니다. */
+const A={user:null,mode:'',init:null,blds:[],jobs:[],reports:[],users:[],un:[],err:'',fbErr:''};
+let D=null;
+async function sha(s){try{const b=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(s));return [...new Uint8Array(b)].map(x=>x.toString(16).padStart(2,'0')).join('')}catch(_){let h=5381;for(const c of s)h=((h<<5)+h+c.charCodeAt(0))|0;return 'x'+h}}
+function emsg(e){
+ const c=(e&&e.code)||'';
+ if(/invalid-credential|user-not-found|wrong-password|invalid-login/.test(c))return'아이디 또는 비밀번호가 올바르지 않습니다.';
+ if(c==='auth/email-already-in-use')return'이미 사용 중인 아이디입니다.';
+ if(c==='auth/weak-password')return'비밀번호는 6자 이상이어야 합니다.';
+ if(c==='auth/operation-not-allowed')return'Firebase 콘솔에서 "이메일/비밀번호" 로그인을 사용 설정해야 합니다.';
+ if(c==='auth/too-many-requests')return'시도가 너무 많습니다. 잠시 후 다시 시도하세요.';
+ if(c==='auth/requires-recent-login')return'보안을 위해 다시 로그인한 뒤 변경하세요.';
+ if(c==='permission-denied'||/insufficient permissions/i.test((e&&e.message)||''))return'권한 오류: Firestore 보안 규칙이 적용되지 않았거나 권한이 없습니다. (README의 "서버 연결 설정" 참고)';
+ if(c==='failed-precondition'||c==='unavailable'||c==='not-found')return'Firestore 데이터베이스가 아직 생성되지 않았거나 연결할 수 없습니다. (README의 "서버 연결 설정" 참고)';
+ return(e&&e.message)||String(e);
+}
+const matchW=(d,w)=>(w||[]).every(x=>d[x[0]]===x[2]);
+
+const Local=(()=>{
+ let mem=null;const subs=[];
+ const load=()=>{if(mem)return mem;try{mem=JSON.parse(localStorage.getItem('fa-db')||'{}')}catch(_){mem={}}if(!mem||typeof mem!=='object')mem={};['users','buildings','jobs','reports','meta'].forEach(c=>mem[c]=mem[c]||{});return mem};
+ const save=()=>{try{localStorage.setItem('fa-db',JSON.stringify(mem))}catch(e){throw new Error('이 기기의 저장 공간이 부족합니다. 사진 수를 줄이거나 Firebase 서버 연결을 사용하세요.')}};
+ const pub=u=>{const o=Object.assign({},u);delete o.hash;return o};
+ const rows=(c,w)=>Object.values(load()[c]).filter(d=>matchW(d,w)).map(d=>c==='users'?pub(d):d);
+ const notify=c=>subs.filter(s=>s.c===c).forEach(s=>s.run());
+ addEventListener('storage',e=>{if(e.key==='fa-db'){mem=null;['users','buildings','jobs','reports'].forEach(notify)}});
+ const api={
+  async init(){load();return'local'},
+  async initialized(){return!!load().meta.init},
+  async createUser(o){
+   const d=load();if(Object.values(d.users).some(u=>u.id===o.id))throw new Error('이미 사용 중인 아이디입니다.');
+   if(!o.pw||o.pw.length<6)throw new Error('비밀번호는 6자 이상이어야 합니다.');
+   const uid='u'+Date.now().toString(36)+rnd();
+   d.users[uid]={uid,id:o.id,name:o.name,role:o.role,phone:o.phone||'',active:true,createdAt:Date.now(),hash:await sha(o.pw)};
+   save();notify('users');return pub(d.users[uid]);
+  },
+  async bootstrap(o){const d=load();if(d.meta.init)throw new Error('이미 초기 설정이 끝났습니다.');const u=await api.createUser(Object.assign({},o,{role:'admin'}));d.meta.init={at:Date.now()};save();localStorage.setItem('fa-sess',u.uid);return u},
+  async login(id,pw){const d=load();const u=Object.values(d.users).find(x=>x.id===id);if(!u||u.hash!==await sha(pw))throw new Error('아이디 또는 비밀번호가 올바르지 않습니다.');if(!u.active)throw new Error('사용이 중지된 계정입니다. 관리자에게 문의하세요.');localStorage.setItem('fa-sess',u.uid);return pub(u)},
+  async restore(){const d=load();const u=d.users[localStorage.getItem('fa-sess')||''];return u&&u.active?pub(u):null},
+  async logout(){localStorage.removeItem('fa-sess')},
+  async changePw(pw){const d=load();const u=d.users[A.user.uid];if(pw.length<6)throw new Error('비밀번호는 6자 이상이어야 합니다.');u.hash=await sha(pw);save()},
+  async list(c,w){return rows(c,w)},
+  async set(c,id,data){load()[c][id]=clone(data);save();notify(c)},
+  async update(c,id,patch){const d=load()[c];if(!d[id])throw new Error('대상을 찾을 수 없습니다.');Object.assign(d[id],clone(patch));save();notify(c)},
+  async del(c,id){delete load()[c][id];save();notify(c)},
+  watch(c,w,cb){const s={c,run:()=>cb(rows(c,w))};subs.push(s);setTimeout(s.run,0);return()=>{const i=subs.indexOf(s);if(i>=0)subs.splice(i,1)}}
+ };
+ return api;
+})();
+
+const FB=(()=>{
+ let auth=null,fs=null;const V='10.14.1';
+ const em=id=>id+'@checkfires.app';
+ const loadScript=src=>new Promise((res,rej)=>{const s=document.createElement('script');s.src=src;s.onload=res;s.onerror=()=>rej(new Error('Firebase 스크립트를 불러오지 못했습니다'));document.head.appendChild(s)});
+ const q=(c,w)=>{let r=fs.collection(c);(w||[]).forEach(x=>{r=r.where(x[0],x[1],x[2])});return r};
+ const prof=async uid=>{const d=await fs.collection('users').doc(uid).get();return d.exists?d.data():null};
+ const api={
+  async init(){
+   const r=await fetch('/__/firebase/init.json',{cache:'no-store'});
+   if(!r.ok)throw new Error('Firebase 웹 앱 구성(init.json)을 찾을 수 없습니다 (HTTP '+r.status+')');
+   const cfg=await r.json();if(!cfg||!cfg.apiKey)throw new Error('Firebase 구성값이 비어 있습니다');
+   for(const m of['app','auth','firestore'])await loadScript('https://www.gstatic.com/firebasejs/'+V+'/firebase-'+m+'-compat.js');
+   firebase.initializeApp(cfg);auth=firebase.auth();fs=firebase.firestore();return'firebase';
+  },
+  async initialized(){return(await fs.collection('meta').doc('init').get()).exists},
+  async bootstrap(o){
+   const c=await auth.createUserWithEmailAndPassword(em(o.id),o.pw);const uid=c.user.uid;
+   const u={uid,id:o.id,name:o.name,role:'admin',phone:'',active:true,createdAt:Date.now()};
+   const b=fs.batch();b.set(fs.collection('users').doc(uid),u);b.set(fs.collection('meta').doc('init'),{at:Date.now(),by:uid});
+   try{await b.commit()}catch(e){try{await c.user.delete()}catch(_){}throw e}
+   return u;
+  },
+  async createUser(o){
+   let sec=firebase.apps.find(a=>a.name==='sec')||firebase.initializeApp(firebase.app().options,'sec');
+   const c=await sec.auth().createUserWithEmailAndPassword(em(o.id),o.pw);const uid=c.user.uid;
+   const u={uid,id:o.id,name:o.name,role:o.role,phone:o.phone||'',active:true,createdAt:Date.now()};
+   try{await fs.collection('users').doc(uid).set(u)}catch(e){try{await c.user.delete()}catch(_){}await sec.auth().signOut();throw e}
+   await sec.auth().signOut();return u;
+  },
+  async login(id,pw){
+   const c=await auth.signInWithEmailAndPassword(em(id),pw);const p=await prof(c.user.uid);
+   if(!p){await auth.signOut();throw new Error('계정 정보가 없습니다. 관리자에게 문의하세요.')}
+   if(!p.active){await auth.signOut();throw new Error('사용이 중지된 계정입니다. 관리자에게 문의하세요.')}
+   return p;
+  },
+  restore(){return new Promise(res=>{const un=auth.onAuthStateChanged(async u=>{un();if(!u)return res(null);try{const p=await prof(u.uid);if(p&&p.active)return res(p);await auth.signOut()}catch(_){}res(null)})})},
+  async logout(){await auth.signOut()},
+  async changePw(pw){await auth.currentUser.updatePassword(pw)},
+  async list(c,w){return(await q(c,w).get()).docs.map(d=>d.data())},
+  async set(c,id,data){await fs.collection(c).doc(id).set(clone(data))},
+  async update(c,id,patch){await fs.collection(c).doc(id).update(clone(patch))},
+  async del(c,id){await fs.collection(c).doc(id).delete()},
+  watch(c,w,cb){return q(c,w).onSnapshot(s=>cb(s.docs.map(d=>d.data())),e=>cb(null,e))}
+ };
+ return api;
+})();
+
+/* ================= 법정 기준 데이터 (관리자 '기준' 탭에 그대로 표시) ================= */
+const USES={
+ '근린생활시설':{ext:100,auto:600,spr:{sub:1000}},
+ '업무시설':{ext:100,auto:1000,spr:{sub:1000}},
+ '판매시설':{ext:100,auto:1000,spr:{total:5000,sub:1000}},
+ '숙박시설':{ext:100,auto:'all',spr:{total:600,sub:1000}},
+ '노유자시설':{ext:100,auto:400,spr:{total:600,sub:1000}},
+ '의료시설':{ext:50,auto:600,spr:{total:600,sub:1000}},
+ '위락시설':{ext:30,auto:600,spr:{sub:1000}},
+ '공동주택(아파트)':{ext:100,auto:'all',spr:{sub:1000}},
+ '공연장·집회시설':{ext:50,auto:1000,spr:{sub:1000}},
+ '그 밖의 용도':{ext:200,auto:1000,spr:{sub:1000}}
+};
+const V1='별표 4 · 2차 자료로 확인',V2='원문 대조 필요';
+const CK={
+ ext:{n:'소화기',s:'E',basis:'NFTC 101 · 용도별 바닥면적당 능력단위(위락 30 / 의료·집회 50 / 근생·업무 등 100 / 그 밖 200㎡), 내화구조+불연·준불연·난연 마감 시 2배, 보행거리 소형 20 m, 바닥에서 1.5 m 이하. 설치대상: 시행령 별표 4 소화기구(연면적 33㎡ 이상)',v:'설치대상 33㎡ '+V1+' / 능력단위·보행거리: '+V2,
+  c:[['위치','보행거리 20 m 이내 · 바닥 1.5 m 이하 · 표지 부착',0],['압력게이지','지시압력이 정상(녹색) 범위',0],['안전핀·봉인','안전핀 체결, 봉인 이상 없음',0],['호스·노즐·외관','호스 균열·변형, 용기 부식 없음',0],['제조연월','분말소화기는 제조 후 10년 미경과(경과 시 교체 또는 성능확인)',0]]},
+ det:{n:'감지기',s:'D',basis:'자동화재탐지설비 설치대상(별표 4) · 감지기 설치면적 NFTC 203 (차동식 스포트형 2종 내화 70㎡ / 그 밖 40㎡ 가정)',v:'설치대상 '+V1+' / 면적당 개수: '+V2,
+  c:[['외형·탈착','변형·탈락·먼지 오염 없음',0],['작동시험','시험기로 작동 → 수신기에 해당 구역 화재표시',1],['설치 위치','천장·벽 이격, 환기구 인접 아님',0]]},
+ pb:{n:'발신기',s:'P',basis:'NFTC 203 · 층마다 설치, 수평거리 25 m 이하, 설치 높이 0.8~1.5 m (면적 1,000㎡당 1개로 보수 산정)',v:'수평거리 25 m 일부 확인 / 나머지 '+V2,
+  c:[['위치·높이','0.8~1.5 m, 식별 쉬운 곳',0],['누름 작동','누름 → 수신기에 신호',1],['응답·표시등','응답 확인등·위치표시등(적색) 점등',1]]},
+ bell:{n:'경종(음향장치)',s:'B',basis:'NFTC 203 · 층마다 설치, 수평거리 25 m 이하 (발신기와 같은 수량으로 산정). 음량 기준은 원문 확인',v:V2,
+  c:[['경종 작동','수신기 시험·감지기 작동 시 해당 층 경종 울림',1],['음량','1 m 거리에서 충분한 크기(기준 dB는 원문 확인)',1],['외관·고정','탈락·훼손 없음',0]]},
+ rcv:{n:'수신기',s:'R',basis:'NFTC 203 · 방재실·1층 출입구 인근, 건물 1대',v:V2,
+  c:[['전원','주전원·예비전원 정상 표시',1],['표시·경보','화재·고장 표시등 이상 없음, 스위치 정상 위치',1],['회로시험','회로 도통·동작시험 결과 이상 없음',1]]},
+ exit:{n:'피난구유도등',s:'출',basis:'유도등 설치대상 별표 4(축사·터널 제외 전체) · NFTC 303 · 계단·옥외 출입구 상부 (개수 = 층 계단 수 + 1층 외부출입구 1)',v:'설치대상 '+V1+' / 개수 산정: '+V2,
+  c:[['점등','상시 점등(녹색)',0],['예비전원','점검스위치로 예비전원 전환 시 점등 유지',1],['가림·장애물','시야 가림·적치물 없음',0]]},
+ path:{n:'통로유도등',s:'통',basis:'NFTC 303 · 복도 구부러진 모퉁이와 보행거리 20 m마다 (필요 수량은 현장 도면 기준 판정)',v:V2,
+  c:[['점등','상시 점등',0],['예비전원','예비전원 전환 시 점등 유지',1],['위치','모퉁이·20 m 간격 충족',0]]},
+ door:{n:'방화문(피난계단)',s:'문',basis:'소방시설법 제16조 · 피난시설·방화구획 및 방화시설의 관리 (피난계단 출입문 = 층 계단 수). 점검항목은 자체점검 종합점검표 피난·방화 항목 기준',v:'조문 번호·항목: '+V2,
+  c:[['설치·훼손','방화문 설치, 문틀·문짝 훼손 없음',0],['자동닫힘','도어클로저로 스스로 닫히고 걸림(래치) 정상',1],['상시 닫힘','고정(괴어둠)·개방 상태 아님',0],['적치물','문 앞·계단실 내 적치물 없음',0]]},
+ spr:{n:'스프링클러 헤드',s:'S',basis:'별표 4 스프링클러 대상 · NFTC 103 · 수평거리 2.3 m 이하(내화구조 가정)',v:'설치대상 '+V1+' / 수평거리: '+V2,
+  c:[['헤드 외관','변형·도장·이물 없음',0],['살수장애','헤드 주변 가림·적치물 없음',0],['말단 시험','말단 시험밸브 개방 → 경보·방수 정상',1]]},
+ hyd:{n:'옥내소화전',s:'H',basis:'별표 4 옥내소화전 (연면적 3,000㎡ 이상, 또는 지하·4층 이상 층 600㎡ 이상) · NFTC 102 · 수평거리 25 m 이하',v:V2,
+  c:[['함 개폐·표지','문 개폐 정상, 위치표시등 점등',1],['호스·노즐','호스 균열·노즐 상태 정상, 정리 보관',0],['기동표시','발신기·기동스위치 누름 시 펌프 기동표시',1]]},
+ desc:{n:'완강기(피난기구)',s:'완',basis:'NFTC 301 · 3층 이상 10층 이하 층마다 (최소 1개로 산정, 용도별 추가 기준은 원문 확인)',v:V2,
+  c:[['고정·지지대','고정 지지대·부착 상태 견고',0],['사용 표지','사용방법 표지 부착, 접근 가능',0],['외관','벨트·로프 손상·부식 없음',0]]}
+};
+const ORDER=['rcv','ext','det','pb','bell','exit','path','door','spr','hyd','desc'];
+
+/* ================= 상태 · 건물 문맥 ================= */
+const FL=[];            // 현재 건물의 층 목록(위→아래)
+let INSP={};            // INSP[층][설비]={has,qty,r:[],photos:[],note}
+const isUnder=f=>/^B/.test(f);
+const fnum=f=>isUnder(f)?-(parseInt(f.slice(1))||1):parseInt(f);
+const S={role:'user',step:0,job:null,floor:'',afloor:'',focus:null,gps:true,view:'iso',rx:58,rz:-35,gap:70,layers:{},use:'',fire2:true,stairs:2,areas:{},ack:false,submitted:null,tab:'mon',rep:null,toast:'',sig:'',login:{tab:'user',msg:'',busy:false},bf:null,jobSel:null,pwOpen:false,dist:null,acc:null,locMsg:'',msg:'',busy:false};
+try{Object.assign(S.layers,JSON.parse(localStorage.getItem('fa-layers')||'{}'))}catch(_){}
+function applyBld(b){
+ FL.length=0;(b.floors||[]).forEach(f=>FL.push(f));
+ S.areas=Object.assign({},b.areas);S.use=b.use;S.fire2=!!b.fire2;S.stairs=+b.stairs||2;
+ S.floor=FL[0]||'';const n=FL.length;S.gap=n<=5?70:Math.max(28,Math.round(350/n));
+}
+function withCtx(job,fn){
+ const sv={f:FL.slice(),i:INSP,a:S.areas,u:S.use,x:S.fire2,s:S.stairs,fl:S.floor,g:S.gap};
+ applyBld(job.bld);INSP=clone(job.insp||{});if(FL.includes(S.afloor))S.floor=S.afloor;
+ try{return fn()}finally{FL.length=0;sv.f.forEach(f=>FL.push(f));INSP=sv.i;S.areas=sv.a;S.use=sv.u;S.fire2=sv.x;S.stairs=sv.s;S.floor=sv.fl;S.gap=sv.g}
+}
+const ph=()=>'';
+function rec(f,k){INSP[f]=INSP[f]||{};return INSP[f][k]=INSP[f][k]||{has:null,qty:'',r:CK[k].c.map(()=>0),photos:[],note:''}}
+const compactInsp=()=>{const o={};Object.keys(INSP).forEach(f=>{o[f]={};Object.keys(INSP[f]).forEach(k=>{const r=INSP[f][k];o[f][k]={has:r.has,qty:r.qty,r:r.r.slice(),note:r.note||''}})});return o};
+
+/* ---------- 규칙 엔진: 층별 필수 비치물품 ---------- */
+const total=()=>FL.reduce((a,f)=>a+(+S.areas[f]||0),0);
+function required(){
+ const U=USES[S.use]||USES['그 밖의 용도'],T=total(),out={};
+ const autoAll=U.auto==='all'||T>=(+U.auto||1e9);
+ FL.forEach(f=>{
+  const a=+S.areas[f]||0,list=[];
+  const base=U.ext*(S.fire2?2:1),units=Math.ceil(a/base);
+  list.push({k:'ext',q:Math.max(1,Math.ceil(units/3)),note:'필요 능력단위 '+units+' (3단위형 기준)'});
+  if(f===FL.filter(x=>!isUnder(x)).slice(-1)[0])list.push({k:'rcv',q:autoAll?1:null,na:!autoAll&&'자동화재탐지설비 대상 아님'});
+  const per=S.fire2?70:40;
+  list.push({k:'det',q:autoAll?Math.ceil(a/per):null,na:!autoAll&&'대상 아님 · 단독경보형감지기 권고',note:autoAll?'면적 '+per+'㎡당 1개':''});
+  list.push({k:'pb',q:autoAll?Math.max(1,Math.ceil(a/1000)):null,na:!autoAll&&'대상 아님'});
+  list.push({k:'bell',q:autoAll?Math.max(1,Math.ceil(a/1000)):null,na:!autoAll&&'대상 아님'});
+  const g=f===FL.filter(x=>!isUnder(x)).slice(-1)[0];
+  list.push({k:'exit',q:S.stairs+(g?1:0),note:'계단 '+S.stairs+(g?' + 외부출입구 1':'')});
+  list.push({k:'path',q:undefined,note:'복도 모퉁이·20 m마다(현장 판정)'});
+  list.push({k:'door',q:S.stairs,note:'피난계단 출입문 '+S.stairs});
+  let spr=false,why='';
+  const sub=U.spr.sub;
+  if(U.spr.total&&T>=U.spr.total){spr=true;why='연면적/합계 '+T+'㎡ ≥ '+U.spr.total}
+  else if((isUnder(f)||fnum(f)>=4)&&a>=sub){spr=true;why='지하·4층 이상 층 '+a+'㎡ ≥ '+sub}
+  list.push({k:'spr',q:spr?undefined:null,na:!spr&&'대상 아님 (지하·4층 이상 층 '+sub+'㎡ 미만)',note:spr?why+' · 헤드 전수 확인':''});
+  let hyd=false,hw='';
+  if(T>=3000){hyd=true;hw='연면적 '+T+'㎡ ≥ 3,000'}else if((isUnder(f)||fnum(f)>=4)&&a>=600){hyd=true;hw='지하·4층 이상 층 '+a+'㎡ ≥ 600'}
+  list.push({k:'hyd',q:hyd?1:null,na:!hyd&&'대상 아님',note:hyd?hw:''});
+  if(fnum(f)>=3&&fnum(f)<=10)list.push({k:'desc',q:1,note:'3~10층 층마다'});
+  out[f]=list.sort((x,y)=>ORDER.indexOf(x.k)-ORDER.indexOf(y.k));
+ });
+ return out;
+}
+function judge(f,it){
+ if(it.na)return{done:true,st:'na'};
+ const r=rec(f,it.k);
+ if(r.has===null)return{done:false,st:'todo'};
+ if(r.has==='no')return{done:true,st:'miss',kind:'미비치',detail:'비치 없음'};
+ const found=r.qty===''?null:+r.qty;
+ if(it.q&&found===null)return{done:false,st:'todo'};
+ if(r.r.some(v=>v===0))return{done:false,st:'todo'};
+ if(it.q&&found<it.q)return{done:true,st:'short',kind:'수량 부족',detail:'필요 '+it.q+' / 확인 '+found};
+ const bad=[],warn=[];CK[it.k].c.forEach((c,i)=>{if(r.r[i]===3)bad.push(c[0]);if(r.r[i]===2)warn.push(c[0])});
+ if(bad.length)return{done:true,st:'bad',kind:'동작·상태 불량',detail:bad.join(', ')};
+ if(warn.length)return{done:true,st:'warn',kind:'보수 필요',detail:warn.join(', ')};
+ return{done:true,st:'ok'};
+}
+const RANK={na:0,ok:1,warn:2,bad:3,short:4,miss:4,todo:-1};
+function summarize(){
+ const req=required(),res={};
+ FL.forEach(f=>{
+  const items=req[f].map(it=>{const j=judge(f,it);return Object.assign({it,f},j)});
+  const live=items.filter(x=>x.st!=='na');
+  const done=live.filter(x=>x.done).length;
+  let worst='ok';live.filter(x=>x.done).forEach(x=>{if(RANK[x.st]>RANK[worst])worst=x.st});
+  const fs=live.length&&done<live.length?(done?'prog':'todo'):(worst==='short'||worst==='miss'?'bad':worst);
+  res[f]={items,done,n:live.length,state:fs};
+ });
+ return res;
+}
+const defects=sm=>{const d=[];FL.forEach(f=>sm[f].items.forEach(x=>{if(['miss','short','bad','warn'].includes(x.st))d.push({f,k:x.it.k,name:CK[x.it.k].n,st:x.st,kind:x.kind,detail:x.detail,photos:rec(f,x.it.k).photos.slice(),note:rec(f,x.it.k).note||'',req:x.it.q||0,found:rec(f,x.it.k).qty})}));return d};
+const needPhoto=x=>['miss','short','bad'].includes(x.st);
+function readiness(sm){
+ let open=0,nophoto=0;
+ FL.forEach(f=>sm[f].items.forEach(x=>{if(x.st==='na')return;if(!x.done)open++;else if(needPhoto(x)&&!rec(f,x.it.k).photos.length)nophoto++}));
+ return{open,nophoto,ok:open===0&&nophoto===0};
+}
+const stTxt={ok:'정상',warn:'경미',bad:'결함',todo:'미점검',prog:'진행 중',na:'해당 없음'};
+const heatCls={ok:'h-ok',warn:'h-warn',bad:'h-bad',todo:'h-no',prog:'h-prog'};
+const pillOf=s=>({ok:'ok',warn:'warn',bad:'bad',todo:'no',prog:'blue'}[s]||'no');
+const jobCls={'배정':'warn','수락':'blue','진행 중':'warn','제출됨':'no','승인':'ok','보완 요청':'bad','미배정':'bad'};
+const NEXT={'접수':['확인 중','보완 요청','승인'],'확인 중':['보완 요청','승인'],'보완 요청':[],'승인':[]};
+const repCls={'접수':'blue','확인 중':'warn','승인':'ok','보완 요청':'bad'};
+
+/* ================= 실시간 구독 · 렌더 제어 ================= */
+let dirty=false;
+const inField=()=>{const a=document.activeElement;return a&&a.closest&&a.closest('#view')&&/^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName)&&a.type!=='checkbox'&&a.type!=='range'};
+const inspecting=()=>A.user&&A.user.role==='inspector'&&S.job&&S.step>=1;
+function softRender(){if(inspecting())return;if(inField()){dirty=true;return}render()}
+document.addEventListener('focusout',()=>{if(dirty)setTimeout(()=>{if(!inField()&&dirty){dirty=false;render()}},60)});
+function stopWatch(){A.un.forEach(f=>{try{f()}catch(_){}});A.un=[]}
+function startWatch(){
+ stopWatch();const u=A.user;
+ const W=(c,w,key,cmp)=>A.un.push(D.watch(c,w,(rows,err)=>{if(err){A.err=emsg(err);return softRender()}A.err='';A[key]=rows.slice().sort(cmp);softRender()}));
+ const byTs=(a,b)=>(b.ts||b.createdAt||0)-(a.ts||a.createdAt||0);
+ const byName=(a,b)=>String(a.name||a.id).localeCompare(String(b.name||b.id),'ko');
+ if(u.role==='admin'){W('buildings',null,'blds',byName);W('jobs',null,'jobs',byTs);W('reports',null,'reports',byTs);W('users',null,'users',byName)}
+ else if(u.role==='inspector'){W('jobs',[['inspUid','==',u.uid]],'jobs',byTs);W('reports',[['inspUid','==',u.uid]],'reports',byTs)}
+ else{W('buildings',[['ownerUid','==',u.uid]],'blds',byName);W('reports',[['ownerUid','==',u.uid],['status','==','승인']],'reports',byTs)}
+}
+
+/* ================= 위치(100 m) ================= */
+let geoId=null;
+const hav=(a,b,c,d)=>{const R=6371000,t=x=>x*Math.PI/180,dl=t(c-a),dg=t(d-b),h=Math.sin(dl/2)**2+Math.cos(t(a))*Math.cos(t(c))*Math.sin(dg/2)**2;return 2*R*Math.asin(Math.sqrt(h))};
+function stopGeo(){if(geoId!=null&&navigator.geolocation)navigator.geolocation.clearWatch(geoId);geoId=null}
+function startGeo(b){
+ stopGeo();S.dist=null;S.acc=null;
+ if(b.lat==null||b.lng==null||b.lat===''||b.lng===''){S.gps=true;S.locMsg='건물 좌표가 설정되지 않아 위치 제한이 없습니다.';return}
+ if(!navigator.geolocation){S.gps=false;S.locMsg='이 기기는 위치 확인을 지원하지 않아 점검 입력이 잠깁니다.';return}
+ S.gps=false;S.locMsg='현장 위치를 확인하는 중…';
+ geoId=navigator.geolocation.watchPosition(p=>{
+  const was=S.gps;S.dist=Math.round(hav(p.coords.latitude,p.coords.longitude,+b.lat,+b.lng));S.acc=Math.round(p.coords.accuracy);
+  S.gps=S.dist<=(+b.radius||100);S.locMsg='현재 건물에서 '+S.dist+' m · 정확도 ±'+S.acc+' m'+(S.gps?'':' — '+(+b.radius||100)+' m 밖이라 열람만 가능합니다');
+  const el=$('#locmsg');if(el)el.textContent=S.locMsg;if(was!==S.gps)render();
+ },e=>{const was=S.gps;S.gps=false;S.locMsg=e.code===1?'위치 권한이 거부되었습니다. 브라우저 설정에서 위치를 허용하세요.':'위치를 확인하지 못했습니다.';const el=$('#locmsg');if(el)el.textContent=S.locMsg;if(was)render()},{enableHighAccuracy:true,maximumAge:5000,timeout:30000});
+}
+
+/* ================= 점검 임시저장 · 진행률 동기화 ================= */
+let pt=null,lastSync='';
+const dkey=id=>'fa-draft-'+id;
+function loadDraft(id){try{return JSON.parse(localStorage.getItem(dkey(id))||'null')}catch(_){return null}}
+function persist(){if(!S.job||!A.user||A.user.role!=='inspector'||S.submitted)return;clearTimeout(pt);pt=setTimeout(doPersist,500)}
+function doPersist(){
+ if(!S.job||S.submitted||!A.user||A.user.role!=='inspector')return;
+ try{localStorage.setItem(dkey(S.job),JSON.stringify({insp:INSP,ack:S.ack,floor:S.floor}))}catch(_){S.toast='이 기기의 임시저장 공간이 부족합니다. 사진을 줄여 주세요.'}
+ const sm=summarize(),done=FL.reduce((a,f)=>a+sm[f].done,0),n=FL.reduce((a,f)=>a+sm[f].n,0),st={};FL.forEach(f=>st[f]=sm[f].state);
+ const prog={pct:n?Math.round(done/n*100):0,states:st,def:defects(sm).length},comp=compactInsp(),key=JSON.stringify([prog,comp]);
+ if(key===lastSync)return;lastSync=key;
+ D.update('jobs',S.job,{progress:Object.assign({at:Date.now()},prog),insp:comp}).catch(e=>{A.err=emsg(e)});
+}
+addEventListener('pagehide',()=>{clearTimeout(pt);doPersist()});document.addEventListener('visibilitychange',()=>{if(document.hidden){clearTimeout(pt);doPersist()}});
+function leaveJob(){doPersist();S.job=null;S.step=0;stopGeo();S.submitted=null;S.sig='';lastSync=''}
+function openJob(id){
+ const j=A.jobs.find(x=>x.id===id);if(!j||!j.bld)return;
+ if(j.status==='배정'){setMsg('배정을 먼저 수락해야 점검을 시작할 수 있습니다.');return render()}
+ if(!['수락','진행 중','보완 요청'].includes(j.status))return;
+ S.job=j.id;applyBld(j.bld);INSP={};S.ack=false;S.submitted=null;S.sig='';S.focus=null;lastSync='';
+ const d=loadDraft(j.id);
+ if(d){INSP=d.insp||{};S.ack=!!d.ack;if(FL.includes(d.floor))S.floor=d.floor}
+ else if(j.insp){INSP=clone(j.insp);Object.keys(INSP).forEach(f=>Object.keys(INSP[f]).forEach(k=>{INSP[f][k].photos=[]}))}
+ startGeo(j.bld);S.step=S.ack?2:1;
+ if(j.status==='수락')D.update('jobs',j.id,{status:'진행 중',startedAt:Date.now()}).catch(e=>{A.err=emsg(e)});
+ render();
+}
+
+/* ================= 로그인 · 계정 ================= */
+async function enter(p){
+ A.user=p;S.role=RKEY[p.role];S.step=0;S.tab='mon';S.job=null;S.bf=null;S.msg='';S.pwOpen=false;
+ A.blds=[];A.jobs=[];A.reports=[];A.users=[];startWatch();render();
+}
+async function doLogout(){stopWatch();stopGeo();try{await D.logout()}catch(_){}A.user=null;S.job=null;S.login={tab:'user',msg:'',busy:false};render()}
+const hostIsFirebase=()=>/\.(web\.app|firebaseapp\.com)$/.test(location.hostname);
+
+function renderLogin(){
+ $('#steps').innerHTML='';
+ $('#userbar').innerHTML=A.mode?'<span class="pill '+(A.mode==='firebase'?'p-ok':'p-warn')+'">'+(A.mode==='firebase'?'서버 연결됨':'로컬 모드')+'</span>':'';
+ let h='';
+ if(A.mode==='blocked'){
+  h='<div class="login"><h2>서버 연결 설정이 필요합니다</h2><div class="msg">'+esc(A.fbErr||'Firebase에 연결하지 못했습니다.')+'</div><div class="card"><p style="margin:0 0 8px">Firebase 콘솔에서 아래 3가지를 한 번만 설정하면 로그인할 수 있습니다.</p><ol style="margin:0;padding-left:20px;font-size:14px;display:grid;gap:4px"><li>프로젝트 설정 → 일반 → <b>웹 앱 추가</b>(&lt;/&gt;)</li><li>빌드 → Authentication → 시작하기 → <b>이메일/비밀번호</b> 사용 설정</li><li>빌드 → Firestore Database → <b>데이터베이스 만들기</b> 후 저장소의 <code>firestore.rules</code> 내용을 규칙 탭에 게시</li></ol></div><button class="btn blue" id="reload">다시 확인</button></div>';
+ }else if(A.init===null){
+  h='<div class="login"><div class="card">'+(A.err?'<div class="msg">'+esc(A.err)+'</div><div class="row" style="margin-top:10px"><button class="btn blue" id="reload">다시 시도</button></div>':'연결을 확인하는 중…')+'</div></div>';
+ }else if(!A.init){
+  h='<form class="login" id="fBoot"><div><div class="kick">최초 설정</div><h2>관리자 계정 만들기</h2><p class="lead" style="margin:0">처음 한 번만 만듭니다. 이 관리자가 이후 점검자·건물주 계정, 건물, 작업을 관리합니다.</p></div>'+
+   (S.login.msg?'<div class="msg">'+esc(S.login.msg)+'</div>':'')+
+   '<label class="fld"><span>이름</span><input type="text" name="name" required autocomplete="name"></label><label class="fld"><span>아이디 (영문·숫자·._- 3~20자)</span><input type="text" name="id" required autocapitalize="none" autocomplete="username"></label><label class="fld"><span>비밀번호 (6자 이상)</span><input type="password" name="pw" required minlength="6" autocomplete="new-password"></label><button class="btn blue" type="submit"'+(S.login.busy?' disabled':'')+'>관리자 계정 만들기</button></form>';
+ }else{
+  const t=S.login.tab;
+  h='<form class="login" id="fLogin"><div><h2>로그인</h2></div>'+
+   '<div class="seg" role="group" aria-label="로그인 구분" style="width:100%">'+[['user','점검자'],['admin','관리자'],['owner','건물주']].map(a=>'<button type="button" style="flex:1" data-ltab="'+a[0]+'" aria-pressed="'+(t===a[0])+'">'+a[1]+'</button>').join('')+'</div>'+
+   (S.login.msg?'<div class="msg">'+esc(S.login.msg)+'</div>':'')+
+   '<label class="fld"><span>아이디</span><input type="text" name="id" required autocapitalize="none" autocomplete="username"></label><label class="fld"><span>비밀번호</span><input type="password" name="pw" required autocomplete="current-password"></label><button class="btn blue" type="submit"'+(S.login.busy?' disabled':'')+'>'+({user:'점검자',admin:'관리자',owner:'건물주'}[t])+' 로그인</button>'+
+   '<p class="small" style="margin:0">계정은 관리자가 만들어 드립니다. 아이디·비밀번호를 모르면 관리자에게 문의하세요.</p>'+
+   (A.mode==='local'?'<div class="banner">로컬 모드입니다. 데이터가 이 기기·이 브라우저에만 저장됩니다. 서버(Firebase)에 배포하면 여러 사람이 함께 쓰는 서버 모드로 동작합니다.</div>':'')+'</form>';
+ }
+ $('#view').innerHTML=h;
+}
+
+function userBar(){
+ const u=A.user;
+ $('#userbar').innerHTML='<span class="pill p-blue">'+ROLES[u.role]+'</span><b>'+esc(u.name)+'</b><span class="small">('+esc(u.id)+')</span>'+
+  '<span class="pill '+(A.mode==='firebase'?'p-ok':'p-warn')+'">'+(A.mode==='firebase'?'서버 연결됨':'로컬 모드')+'</span>'+
+  '<button class="btn ghost sm" id="pwbtn">비밀번호 변경</button><button class="btn ghost sm" id="logout">로그아웃</button>';
+}
+function pwForm(){
+ return'<form class="card" id="fPw" style="display:grid;gap:10px;max-width:420px"><h3 style="margin:0">비밀번호 변경</h3><label class="fld"><span>새 비밀번호 (6자 이상)</span><input type="password" name="pw" minlength="6" required autocomplete="new-password"></label><div class="row"><button class="btn blue sm" type="submit">변경</button><button class="btn ghost sm" type="button" id="pwcancel">닫기</button></div></form>';
+}
+const flash=()=>S.msg?'<div class="msg '+(S.msgOk?'ok':'')+'">'+esc(S.msg)+'</div>':'';
+const errBanner=()=>A.err?'<div class="msg">'+esc(A.err)+'</div>':'';
+
+/* ================= 렌더 ================= */
+function render(){
+ if(!A.user)return renderLogin();
+ userBar();
+ const role=A.user.role;let steps='',html='';
+ if(role==='inspector'){
+  const has=!!S.job;
+  steps=[['0','내 작업'],['1','① 고지'],['2','② 3D 층별 점검'],['3','③ 리포트 제출']].map(a=>'<button data-step="'+a[0]+'" aria-current="'+(S.step==a[0]?'step':'false')+'"'+(a[0]!=='0'&&(!has||(a[0]!=='1'&&!S.ack))?' disabled':'')+'>'+a[1]+'</button>').join('');
+  if(!has||S.step===0){S.step=0;html=vHome()}
+  else{const sm=summarize(),rd=readiness(sm);html=S.step===1?vNotice():S.step===2?vInspect(sm,rd):vReport(sm,rd)}
+ }else if(role==='admin'){
+  const open=A.reports.filter(r=>r.status==='접수'||r.status==='확인 중').length;
+  steps=[['mon','모니터링'],['job','작업 분배'],['bld','건물'],['usr','사용자'],['rep','제출 리포트'+(open?' ('+open+')':'')],['b3d','3D 열람'],['rule','기준·규칙']].map(a=>'<button data-tab="'+a[0]+'" aria-current="'+(S.tab==a[0]?'step':'false')+'">'+a[1]+'</button>').join('');
+  html=({mon:aMon,job:aJob,bld:aBld,usr:aUsr,rep:aRep,b3d:aB3d,rule:aRule}[S.tab]||aMon)();
+ }else{
+  steps='<button aria-current="step">점검 결과 열람</button>';html=vOwner();
+ }
+ $('#steps').innerHTML=steps;
+ $('#view').innerHTML=(S.pwOpen?pwForm():'')+errBanner()+html;
+ fitStage();paintSig();
+ if(S.job&&S.step===2&&!S.gps)$('#view').querySelectorAll('.item button,.item input,.item textarea').forEach(e=>e.disabled=true);
+ persist();
+}
+
+/* ---------- 점검자: 내 작업 ---------- */
+function vHome(){
+ const mine=A.jobs.slice().sort((a,b)=>String(a.date).localeCompare(String(b.date)));
+ const act=mine.filter(j=>j.status!=='승인'),done=mine.filter(j=>j.status==='승인');
+ let h='<div><div class="kick">INSPECTOR</div><h2>내 작업</h2><p class="lead">관리자가 배정한 점검 작업입니다. 배정을 <b>수락</b>해야 점검을 시작할 수 있고, 현장 100 m 안에서만 점검 입력이 열립니다. 제출한 뒤에는 수정할 수 없으며 관리자가 보완을 요청하면 다시 열립니다.</p></div>'+flash();
+ h+=act.length?'<div class="list">'+act.map(j=>{
+  const b=j.bld||{},lab={'수락':'점검 시작','진행 중':'이어서 점검','보완 요청':'보완 점검'}[j.status];
+  const rep=j.reportId&&A.reports.find(r=>r.id===j.reportId);
+  return'<div class="card"><div class="row"><div><b>'+esc(j.bldName)+'</b><div class="small">'+esc(b.address||'')+' · '+esc(j.date||'')+(j.note?' · '+esc(j.note):'')+'</div></div><span class="sp"></span><span class="pill p-'+(jobCls[j.status]||'no')+'">'+esc(j.status)+'</span>'+(j.status==='배정'?'<button class="btn blue sm" data-resp="'+esc(j.id)+':ok">수락</button><button class="btn ghost sm" data-resp="'+esc(j.id)+':no">거절</button>':lab?'<button class="btn blue sm" data-open="'+esc(j.id)+'">'+lab+'</button>':'<span class="small">관리자 확인 대기</span>')+'</div>'+
+   (j.status==='보완 요청'&&rep&&rep.comment?'<div class="notice red" style="margin-top:10px"><b>관리자 의견</b> · '+esc(rep.comment)+'</div>':'')+(j.progress&&j.status==='진행 중'?'<div class="small" style="margin-top:6px">진행 '+j.progress.pct+'%</div><div class="bar"><i style="width:'+j.progress.pct+'%"></i></div>':'')+'</div>'}).join('')+'</div>':'<div class="notice blue">배정된 작업이 없습니다. 관리자가 작업을 배정하면 여기에 나타납니다.</div>';
+ if(done.length)h+='<div><h3>승인 완료</h3><div class="list">'+done.map(j=>'<div class="card"><div class="row"><b>'+esc(j.bldName)+'</b><span class="small">'+esc(j.date||'')+'</span><span class="sp"></span><span class="pill p-ok">승인</span></div></div>').join('')+'</div></div>';
+ return h;
+}
+
+/* ---------- 점검자: ① 고지 ---------- */
+function vNotice(){
+ const req=required(),T=total(),j=A.jobs.find(x=>x.id===S.job)||{};
+ const cell=(f,k)=>{const it=req[f].find(x=>x.k===k);if(!it)return'<td class="na">—</td>';if(it.na)return'<td class="na">대상 아님</td>';return'<td class="n">'+(it.q?it.q+'개':'확인')+'</td>'};
+ const keys=ORDER.filter(k=>FL.some(f=>req[f].some(x=>x.k===k)));
+ return'<div><div class="kick">STEP 1</div><h2>법정 비치 기준 고지</h2><p class="lead">건물 정보와 층별 면적에 따라 소방법상 갖춰야 할 소화기·경보·유도등·방화문·스프링클러 등의 필수 수량이 자동 산출됩니다. 이 목록이 점검의 기준이 됩니다.</p></div>'+
+ '<div class="notice"><b>관계인 고지</b> · 특정소방대상물의 관계인은 소방시설을 화재안전기준에 맞게 설치·관리하고, 피난·방화시설을 유지하며, 정기 자체점검을 해야 합니다(소방시설법). 아래 수량은 앱이 면적으로 산출한 <b>참고 기준</b>이며, 최종 판단은 소방설계·점검 전문가와 관할 소방서 확인이 필요합니다. 일부 수치는 원문 대조 전 상태입니다(관리자 기준·규칙 탭 참고).</div>'+
+ '<div class="grid g2"><div class="card"><h3>건물 정보</h3><div class="list" style="gap:8px"><div class="qrow"><span style="width:110px">건물</span><b>'+esc(j.bldName)+'</b></div><div class="qrow"><span style="width:110px">주소</span>'+esc((j.bld||{}).address||'-')+'</div><div class="qrow"><span style="width:110px">주 용도</span>'+esc(S.use)+'</div><div class="qrow"><span style="width:110px">내화·불연 마감</span>'+(S.fire2?'예 (소화기 면적 기준 2배 적용)':'아니오')+'</div><div class="qrow"><span style="width:110px">층별 계단 수</span>'+S.stairs+'</div></div><p class="small" style="margin:8px 0 0">건물 정보가 현장과 다르면 관리자에게 수정을 요청하세요.</p></div>'+
+ '<div class="card"><h3>층별 바닥면적 (㎡)</h3><div class="list" style="gap:6px">'+FL.map(f=>'<div class="qrow"><span style="width:44px;font:700 13px var(--mono)">'+f+'</span><b>'+(+S.areas[f]||0).toLocaleString()+'</b><span class="small">'+(isUnder(f)?'지하층':'지상층')+'</span></div>').join('')+'</div><p class="small" style="margin:8px 0 0">연면적 <b>'+T.toLocaleString()+'㎡</b></p></div></div>'+
+ '<div><h3>층별 필수 비치물품 (자동 산출)</h3><div class="tw"><table class="mx"><tr><th>설비</th>'+FL.map(f=>'<th class="c">'+f+'</th>').join('')+'<th>산출 근거</th></tr>'+
+ keys.map(k=>'<tr><td><b>'+CK[k].n+'</b></td>'+FL.map(f=>cell(f,k)).join('')+'<td class="small" style="min-width:260px">'+esc(CK[k].basis)+'<br><span class="tag">'+esc(CK[k].v)+'</span></td></tr>').join('')+'</table></div></div>'+
+ '<div class="card"><label class="cb"><input type="checkbox" id="ack"'+(S.ack?' checked':'')+'><span><b>고지 내용을 확인했습니다.</b> 위 비치 기준과 점검 항목을 확인했으며, 점검 결과를 사실대로 입력·사진으로 증빙하겠습니다.</span></label><div class="row" style="margin-top:12px"><button class="btn blue" id="go2"'+(S.ack?'':' disabled')+'>층별 점검 시작 →</button></div></div>';
+}
+
+/* ---------- 점검자: ② 3D 층별 점검 ---------- */
+function vInspect(sm,rd){
+ const f=S.floor,F=sm[f],states={};FL.forEach(x=>states[x]=sm[x].state);
+ const list=FL.map(x=>'<button data-floor="'+x+'" aria-pressed="'+(x===f)+'"><b style="font-family:var(--mono)">'+x+'</b><span><span class="small">'+sm[x].done+'/'+sm[x].n+' 항목</span><span class="bar"><i style="width:'+(sm[x].n?sm[x].done/sm[x].n*100:0)+'%"></i></span></span><span class="pill p-'+pillOf(sm[x].state)+'">'+stTxt[sm[x].state]+'</span></button>').join('');
+ const all=FL.reduce((a,x)=>a+sm[x].done,0),alln=FL.reduce((a,x)=>a+sm[x].n,0);
+ let h='<div><div class="kick">STEP 2</div><h2>층별 점검</h2><p class="lead">층을 고르고 항목마다 ① 비치 유무 ② 확인 수량 ③ 동작·상태 점검 ④ 사진을 입력하세요. 없음·수량 부족·불량은 사진이 필수입니다. 입력은 자동으로 저장됩니다.</p></div>';
+ h+=(S.gps?'':'<div class="notice red">현장에서 떨어져 있어 열람만 가능하고 점검 입력은 잠겨 있습니다.</div>')+'<div class="small" id="locmsg">'+esc(S.locMsg)+'</div>'+
+  '<div class="v3"><div>'+ctl()+stage3d(sm)+LEG+'</div><aside class="card"><h3>층별 진행</h3><div class="fl-list">'+list+'</div><p class="small" style="margin:10px 0 0">전체 '+all+'/'+alln+' 항목 완료</p><p class="small" style="margin:6px 0 0">마커를 누르면 그 설비의 점검 항목으로 이동합니다. 마커 색 = 점검 상태.</p></aside></div><section class="list" style="gap:12px">';
+ h+='<div class="row"><h3 style="margin:0">'+f+' · '+(+S.areas[f]||0).toLocaleString()+'㎡ ('+(isUnder(f)?'지하층':'지상층')+')</h3></div>';
+ F.items.forEach(x=>{
+  const it=x.it,C=CK[it.k],na=x.st==='na';
+  const r=na?null:rec(f,it.k);
+  h+='<article id="it-'+it.k+'" class="item'+(na?' na':'')+(S.focus===it.k?' focus':'')+'"><header><span class="pill p-blue">'+C.s+'</span><b>'+C.n+'</b>'+(na?'<span class="pill p-no">'+esc(it.na)+'</span>':(it.q?'<span class="pill p-no">필수 '+it.q+'개</span>':'<span class="pill p-no">수량 현장 판정</span>')+(it.note?'<span class="small">'+esc(it.note)+'</span>':''))+'<span class="sp"></span>'+(na?'':'<span class="pill p-'+({ok:'ok',warn:'warn',bad:'bad',short:'bad',miss:'bad',todo:'no'}[x.st])+'">'+({ok:'정상',warn:'보수 필요',bad:'불량',short:'수량 부족',miss:'미비치',todo:'점검 전'}[x.st])+'</span>')+'</header>';
+  if(!na){
+   h+='<div class="body"><div class="qrow"><div class="opts" style="min-width:210px"><button class="y" data-has="'+it.k+'" data-v="yes" aria-pressed="'+(r.has==='yes')+'">있음</button><button class="n" data-has="'+it.k+'" data-v="no" aria-pressed="'+(r.has==='no')+'">없음</button></div>'+
+    (r.has==='yes'?'<label class="qrow"><span>확인 수량</span><input type="number" min="0" data-qty="'+it.k+'" value="'+esc(r.qty)+'"><span class="small">개'+(it.q?' (필수 '+it.q+')':'')+'</span></label>':'')+'</div>';
+   if(r.has==='yes'){
+    h+='<div class="list" style="gap:6px">'+C.c.map((c,i)=>'<div class="ck"><div class="q">'+esc(c[0])+(c[2]?' <span class="pill p-warn">동작 확인</span>':'')+'<span class="small">'+esc(c[1])+'</span></div><div class="opts">'+[['정상',1],['보수필요',2],['불량',3]].map(o=>'<button class="o'+o[1]+'" data-ck="'+it.k+':'+i+'" data-v="'+o[1]+'" aria-pressed="'+(r.r[i]===o[1])+'">'+o[0]+'</button>').join('')+'</div></div>').join('')+'</div>';
+   }
+   if(r.has!==null){
+    const need=needPhoto(x);
+    h+='<div><div class="small" style="margin-bottom:6px">사진 '+r.photos.length+'장'+(need?' · <b style="color:var(--red)">증빙 사진 필수</b>':' · 선택')+'</div><div class="photos">'+r.photos.map((p,i)=>'<div class="ph"><img src="'+p+'" alt="점검 사진 '+(i+1)+'" data-lb="'+it.k+':'+i+'"><button data-del="'+it.k+':'+i+'" aria-label="사진 삭제">×</button></div>').join('')+
+     '<span class="addph"><label class="btn ghost sm">📷 촬영·선택<input type="file" accept="image/*" capture="environment" multiple hidden data-file="'+it.k+'"></label></span></div>'+
+     '<textarea placeholder="메모 (위치, 증상, 조치 필요 사항)" data-note="'+it.k+'">'+esc(r.note)+'</textarea></div>';
+   }
+   h+='</div>';
+  }
+  h+='</article>';
+ });
+ const i=FL.indexOf(f);
+ h+='<div class="row"><button class="btn ghost" data-nav="'+(i>0?FL[i-1]:'')+'"'+(i>0?'':' disabled')+'>← 위층</button><button class="btn ghost" data-nav="'+(i<FL.length-1?FL[i+1]:'')+'"'+(i<FL.length-1?'':' disabled')+'>아래층 →</button><span class="sp"></span><button class="btn blue" id="go3">리포트 만들기 →</button></div></section>';
+ return h;
+}
+
+/* ---------- 점검자: ③ 리포트 ---------- */
+function vReport(sm,rd){
+ if(S.submitted)return'<div><div class="kick">STEP 3</div><h2>제출 완료</h2></div><div class="notice blue"><b>리포트 '+esc(S.submitted)+'</b>가 관리자에게 접수되었습니다. '+esc(S.msg||'')+'</div><div class="row"><button class="btn blue" id="again">내 작업으로</button></div>';
+ const d=defects(sm),pc=FL.reduce((a,f)=>a+sm[f].items.reduce((b,x)=>b+(x.st==='na'?0:rec(f,x.it.k).photos.length),0),0);
+ let req=0,found=0;FL.forEach(f=>sm[f].items.forEach(x=>{if(x.st!=='na'&&x.it.q){req+=x.it.q;found+=Math.min(x.it.q,+rec(f,x.it.k).qty||0)}}));
+ let h='<div><div class="kick">STEP 3</div><h2>점검 리포트</h2><p class="lead">점검 결과가 자동으로 정리됩니다. 서명하고 관리자에게 제출하세요.</p></div>'+flash();
+ h+='<div class="grid g4"><div class="kpi"><b>'+FL.reduce((a,f)=>a+sm[f].done,0)+'/'+FL.reduce((a,f)=>a+sm[f].n,0)+'</b><span>점검 완료 항목</span></div><div class="kpi"><b style="color:var(--red)">'+d.length+'</b><span>결함·보수 항목</span></div><div class="kpi"><b>'+found+'/'+req+'</b><span>필수 수량 충족</span></div><div class="kpi"><b>'+pc+'</b><span>첨부 사진</span></div></div>';
+ h+='<div class="tw"><table><tr><th>층</th><th>상태</th><th class="c">완료</th><th class="c">결함</th></tr>'+FL.map(f=>'<tr><td><b>'+f+'</b></td><td><span class="heat '+heatCls[sm[f].state]+'">'+stTxt[sm[f].state]+'</span></td><td class="c">'+sm[f].done+'/'+sm[f].n+'</td><td class="c">'+d.filter(x=>x.f===f).length+'</td></tr>').join('')+'</table></div>';
+ h+='<div><h3>결함·보수 항목</h3>'+(d.length?'<div class="dfx">'+d.map(x=>dfCard(x)).join('')+'</div>':'<div class="notice blue">결함이 없습니다.</div>')+'</div>';
+ h+='<div class="card"><h3>점검 확인 서명</h3><canvas id="sig" class="sigpad" width="640" height="260" aria-label="서명 영역"></canvas><div class="row" style="margin-top:8px"><button class="btn ghost sm" id="sigclear">지우기</button><span class="small">손가락이나 마우스로 서명하세요.</span></div></div>';
+ h+='<div class="card"><h3>제출 전 확인</h3>'+(rd.ok?'<p style="margin:0 0 10px;color:var(--green)">모든 항목이 입력되었고 필수 사진이 첨부되었습니다.</p>':'<p style="margin:0 0 10px;color:var(--red)">미입력 항목 '+rd.open+'건'+(rd.nophoto?' · 필수 사진 누락 '+rd.nophoto+'건':'')+' — 층별 점검으로 돌아가 완료하세요.</p>')+(S.gps?'':'<p style="margin:0 0 10px;color:var(--red)">현장 위치가 확인되어야 제출할 수 있습니다.</p>')+'<div class="row"><button class="btn ghost" id="back2">← 점검으로</button><span class="sp"></span><button class="btn blue" id="submit"'+(rd.ok&&S.sig&&S.gps&&!S.busy?'':' disabled')+'>'+(S.busy?'제출 중…':'관리자에게 제출')+'</button></div></div>';
+ return h;
+}
+function dfCard(x,fixed){
+ return'<div class="df"><div class="row">'+(fixed?'<span class="pill p-ok">조치 완료</span>':'')+'<span class="pill p-'+(x.st==='warn'?'warn':'bad')+'">'+esc(x.kind)+'</span><b>'+esc(x.f)+' · '+esc(x.name)+'</b><span class="small">'+esc(x.detail)+'</span></div>'+(x.note?'<div class="small" style="margin-top:4px">메모: '+esc(x.note)+'</div>':'')+
+  ((x.photos||[]).length?'<div class="photos" style="margin-top:8px">'+x.photos.map(p=>'<div class="ph"><img src="'+p+'" alt="증빙 사진" data-src="'+p+'"></div>').join('')+'</div>':'<div class="small" style="margin-top:4px;color:var(--red)">사진 없음</div>')+(typeof fixed==='string'?'<div class="small" style="margin-top:4px;color:var(--green)">조치 내용: '+esc(fixed)+'</div>':'')+'</div>';
+}
+
+/* ---------- 3D 건물 ---------- */
+const POS={rcv:[14,26],ext:[22,72],det:[48,40],pb:[84,78],bell:[74,64],exit:[92,34],path:[58,54],door:[90,50],spr:[40,28],hyd:[68,80],desc:[8,52]};
+const ROOMS='<div class="rm" style="left:4%;top:10%;width:34%;height:44%"></div><div class="rm" style="left:40%;top:10%;width:26%;height:44%"></div><div class="rm" style="left:4%;top:58%;width:62%;height:34%"></div><div class="rm" style="left:68%;top:70%;width:20%;height:22%"></div><div class="stc"></div>';
+let drag=null,moved=0;
+document.addEventListener('pointerdown',e=>{if(!e.target.closest('.stage')||S.view==='top')return;drag={x:e.clientX,y:e.clientY,rx:S.rx,rz:S.rz};moved=0});
+addEventListener('pointermove',e=>{if(!drag)return;const dx=e.clientX-drag.x,dy=e.clientY-drag.y;moved=Math.max(moved,Math.abs(dx)+Math.abs(dy));if(moved<4)return;S.rz=drag.rz+dx*.4;S.rx=Math.max(20,Math.min(80,drag.rx-dy*.3));const sc=$('#scene');if(sc){sc.style.setProperty('--rx',S.rx+'deg');sc.style.setProperty('--rz',S.rz+'deg')}});
+addEventListener('pointerup',()=>{drag=null});
+function fitStage(){const st=$('#stage');if(!st)return;st.querySelector('.scene').style.setProperty('--sc',Math.min(1.15,st.clientWidth/430).toFixed(3))}
+addEventListener('resize',fitStage);
+const mkCls=s=>s==='ok'?' s-ok':s==='warn'?' s-warn':(s==='bad'||s==='short'||s==='miss')?' s-bad':'';
+function stage3d(sm){
+ const top=S.view==='top',n=FL.length;
+ let h='<div class="stage" id="stage" aria-label="건물 3D 층별 구조. 드래그하여 회전"><div class="scene" id="scene" style="--rx:'+(top?0:S.rx)+'deg;--rz:'+(top?0:S.rz)+'deg">';
+ FL.forEach((f,i)=>{
+  const z=top?0:(n-1-i)*S.gap-(n-1)*S.gap/2,sel=S.floor===f;
+  h+='<div class="fl'+(sel?' sel':' dim')+'" data-fl="'+f+'" style="transform:translateZ('+z+'px);'+(top&&!sel?'display:none':'')+'"><span class="fn">'+f+'</span>'+ROOMS+
+   sm[f].items.filter(x=>x.st!=='na'&&S.layers[x.it.k]!==false).map(x=>{const p=POS[x.it.k]||[50,50];return'<button class="mk'+mkCls(x.st)+(S.focus===x.it.k&&sel?' cur':'')+(sel?'':' off')+'" data-mk="'+x.it.k+'" data-f="'+f+'" style="left:'+p[0]+'%;top:'+p[1]+'%" aria-label="'+f+' '+CK[x.it.k].n+'">'+CK[x.it.k].s+'</button>'}).join('')+'</div>';
+ });
+ return h+'</div><div class="hint">드래그: 회전 · 마커: 점검 · 층: 선택</div></div>';
+}
+function ctl(){
+ const req=required();
+ const keys=ORDER.filter(k=>FL.some(f=>req[f].some(x=>x.k===k&&!x.na)));
+ return'<div class="ctl"><div class="seg" role="group" aria-label="보기"><button data-view="iso" aria-pressed="'+(S.view==='iso')+'">입체</button><button data-view="top" aria-pressed="'+(S.view==='top')+'">평면</button></div>'+
+ '<label>층 간격 <input type="range" id="gap" min="20" max="130" value="'+S.gap+'"></label></div>'+
+ '<div class="ctl" role="group" aria-label="설비 레이어"><span class="small">레이어</span>'+keys.map(k=>'<button class="chip" role="switch" aria-checked="'+(S.layers[k]!==false)+'" data-lay="'+k+'">'+CK[k].s+' '+CK[k].n+'</button>').join('')+'</div>';
+}
+const LEG='<div class="legend" style="margin-top:8px"><span><i style="background:var(--grey)"></i>점검 전</span><span><i style="background:var(--green)"></i>정상</span><span><i style="background:var(--amber)"></i>보수·경미</span><span><i style="background:var(--red)"></i>불량·미비치·부족</span></div>';
+
+/* ---------- 서명 패드 ---------- */
+function paintSig(){
+ const c=$('#sig');if(!c)return;const x=c.getContext('2d');x.fillStyle='#fff';x.fillRect(0,0,c.width,c.height);
+ if(S.sig){const im=new Image();im.onload=()=>x.drawImage(im,0,0,c.width,c.height);im.src=S.sig}
+}
+let sg=null;
+function sgPos(e,c){const r=c.getBoundingClientRect();return[(e.clientX-r.left)*c.width/r.width,(e.clientY-r.top)*c.height/r.height]}
+document.addEventListener('pointerdown',e=>{if(e.target.id!=='sig')return;const c=e.target,x=c.getContext('2d');sg=c;x.lineWidth=4;x.lineCap='round';x.lineJoin='round';x.strokeStyle='#111';const p=sgPos(e,c);x.beginPath();x.moveTo(p[0],p[1]);x.lineTo(p[0]+.1,p[1]+.1);x.stroke();c.setPointerCapture&&c.setPointerCapture(e.pointerId);e.preventDefault()});
+document.addEventListener('pointermove',e=>{if(!sg)return;const x=sg.getContext('2d'),p=sgPos(e,sg);x.lineTo(p[0],p[1]);x.stroke()});
+document.addEventListener('pointerup',()=>{if(!sg)return;S.sig=sg.toDataURL('image/png');sg=null;const b=$('#submit');if(b){const sm=summarize();b.disabled=!(readiness(sm).ok&&S.sig&&S.gps&&!S.busy)}});
+
+/* ================= 관리자 ================= */
+const floorChips=(states,floors)=>(floors||Object.keys(states||{})).map(f=>'<span class="heat '+heatCls[(states||{})[f]||'todo']+'" title="'+esc(f)+'">'+esc(f)+'</span>').join(' ');
+const inspectors=()=>A.users.filter(u=>u.role==='inspector'&&u.active);
+const owners=()=>A.users.filter(u=>u.role==='owner'&&u.active);
+function aMon(){
+ const jobs=A.jobs,openJ=jobs.filter(j=>['배정','수락','진행 중','보완 요청'].includes(j.status)),waiting=A.reports.filter(r=>r.status==='접수'||r.status==='확인 중').length;
+ const unfixed=A.reports.filter(r=>r.status==='승인').reduce((a,r)=>a+r.defects.filter((x,i)=>!(r.fixes&&r.fixes[i])).length,0);
+ const defT=A.reports.filter(r=>r.status!=='승인').reduce((a,r)=>a+r.defects.length,0);
+ let h='<div><div class="kick">ADMIN</div><h2>점검 모니터링</h2><p class="lead">점검자가 입력하는 진행 상황이 자동으로 반영됩니다. 제출된 리포트는 "제출 리포트" 탭에서 확인·승인합니다.</p></div>'+flash();
+ h+='<div class="grid g4"><div class="kpi"><b>'+A.blds.length+'</b><span>등록 건물</span></div><div class="kpi"><b>'+openJ.length+'</b><span>진행·대기 작업</span></div><div class="kpi"><b style="color:var(--amber)">'+waiting+'</b><span>확인 대기 리포트</span></div><div class="kpi"><b style="color:var(--red)">'+(defT+unfixed)+'</b><span>미조치 결함 (제출 '+defT+' · 승인 후 '+unfixed+')</span></div></div>';
+ h+=jobs.length?'<div class="tw"><table><tr><th>건물</th><th>점검자</th><th>날짜</th><th>상태</th><th>진행</th><th>층별 상태</th><th class="c">결함</th></tr>'+jobs.map(j=>{const p=j.progress||{pct:0,states:{},def:0};
+  return'<tr><td><b>'+esc(j.bldName)+'</b></td><td>'+esc(j.inspName||'미배정')+'</td><td>'+esc(j.date||'')+'</td><td><span class="pill p-'+(jobCls[j.status]||'no')+'">'+esc(j.status)+'</span></td><td style="min-width:110px">'+(['제출됨','승인'].includes(j.status)?100:p.pct)+'%<div class="bar"><i style="width:'+(['제출됨','승인'].includes(j.status)?100:p.pct)+'%"></i></div></td><td>'+floorChips(p.states,(j.bld||{}).floors)+'</td><td class="c">'+(p.def||0)+'</td></tr>'}).join('')+'</table></div>':'<div class="notice blue">작업이 없습니다. "작업 분배"에서 만드세요. 건물이 없다면 먼저 "건물"에서 등록합니다.</div>';
+ h+='<div class="legend"><span><i style="background:var(--green)"></i>정상</span><span><i style="background:var(--amber)"></i>경미</span><span><i style="background:var(--red)"></i>결함</span><span><i style="background:var(--blue)"></i>진행 중</span><span><i style="background:var(--grey)"></i>미점검</span></div>';
+ return h;
+}
+function aJob(){
+ const ins=inspectors(),today_=today();
+ const lock=j=>['진행 중','제출됨','승인','보완 요청'].includes(j.status);
+ const col=(t,uid)=>{const js=A.jobs.filter(j=>(j.inspUid||null)===uid);const act=js.filter(j=>j.status!=='승인').length;
+  return'<div class="col"><h3 style="margin:0">'+esc(t)+' <span class="pill '+(uid?(act>3?'p-bad':'p-no'):'p-bad')+'">'+js.length+'</span></h3>'+js.map(j=>'<div class="tk"><b>'+esc(j.bldName)+'</b><div class="small">'+esc(j.date||'')+(j.note?' · '+esc(j.note):'')+'</div><div class="row"><span class="pill p-'+(jobCls[j.status]||'no')+'">'+esc(j.status)+'</span><span class="sp"></span><button class="btn '+(ARM==='j:'+j.id?'bad':'ghost')+' sm" data-jdel="'+esc(j.id)+'"'+(j.status==='승인'?' disabled title="승인된 작업은 삭제할 수 없습니다"':'')+' aria-label="작업 삭제">'+(ARM==='j:'+j.id?'삭제 확인':'삭제')+'</button></div><select data-job="'+esc(j.id)+'" aria-label="점검자 배정"'+(lock(j)?' disabled':'')+'><option value="">미배정</option>'+ins.map(u=>'<option value="'+esc(u.uid)+'"'+(j.inspUid===u.uid?' selected':'')+'>'+esc(u.name)+'</option>').join('')+'</select></div>').join('')+(js.length?'':'<div class="small">비어 있음</div>')+'</div>'};
+ let h='<div><div class="kick">ADMIN</div><h2>작업 분배</h2><p class="lead">건물을 골라 점검 작업을 만들고 점검자에게 배정합니다. 배정된 점검자의 "내 작업"에 바로 나타납니다. 진행 중인 작업은 재배정할 수 없습니다.</p></div>'+flash();
+ if(!A.blds.length)h+='<div class="notice">등록된 건물이 없습니다. 먼저 "건물" 탭에서 건물을 등록하세요.</div>';
+ else h+='<form class="card" id="fJob" style="display:grid;gap:12px"><h3 style="margin:0">새 작업</h3><div class="fgrid"><label class="fld"><span>건물</span><select name="bld" required>'+A.blds.map(b=>'<option value="'+esc(b.id)+'">'+esc(b.name)+'</option>').join('')+'</select></label><label class="fld"><span>점검 예정일</span><input type="date" name="date" value="'+today_+'" required></label><label class="fld"><span>점검자</span><select name="insp"><option value="">미배정</option>'+ins.map(u=>'<option value="'+esc(u.uid)+'">'+esc(u.name)+'</option>').join('')+'</select></label><label class="fld"><span>메모</span><input type="text" name="note" placeholder="예: 작동점검"></label></div><div class="row"><button class="btn blue" type="submit">작업 만들기</button>'+(ins.length?'':'<span class="small">점검자 계정이 없습니다. "사용자" 탭에서 만드세요.</span>')+'</div></form>';
+ h+='<div class="board">'+col('미배정',null)+ins.map(u=>col(u.name,u.uid)).join('')+'</div>';
+ if(ins.some(u=>A.jobs.filter(j=>j.inspUid===u.uid&&j.status!=='승인').length>3))h+='<div class="notice red">한 점검자에게 진행 중 작업이 3건을 넘었습니다.</div>';
+ return h;
+}
+/* 건물 */
+const mkFloors=(g,u)=>{const o=[];for(let i=g;i>=1;i--)o.push(i+'F');for(let i=1;i<=u;i++)o.push('B'+i);return o};
+function newBF(){return{id:'',name:'',address:'',use:'근린생활시설',fire2:true,stairs:2,ground:4,under:1,areas:{'4F':300,'3F':300,'2F':300,'1F':420,'B1':300},ownerUid:'',lat:'',lng:'',radius:100}}
+/* ================= 건축물대장 검색 (건물 등록 시 주소로 찾기) =================
+   데이터: ledger.b64 (근린생활·판매·업무·숙박·위락·문화집회·운동·의료·관광휴게 시설이 있는 대지). 처음 검색할 때만 내려받는다. */
+const LG=(()=>{
+ let G,U,E,R,FD=[],FUs=[],gS=[],gE=[],roadIdx=null,loading=null;
+ const useKey=m=>/근린생활|소매/.test(m)?'근린생활시설':/판매/.test(m)?'판매시설':/업무/.test(m)?'업무시설':/숙박/.test(m)?'숙박시설':/위락/.test(m)?'위락시설':/문화|집회/.test(m)?'공연장·집회시설':/의료/.test(m)?'의료시설':'그 밖의 용도';
+ const addr=r=>G[r[0]]+' '+(r[3]?'산':'')+r[1]+(r[2]?'-'+r[2]:'')+'번지';
+ const sgg=g=>G[g].split(' ').slice(0,-1).join(' ');
+ async function load(){
+  if(R)return;
+  if(!loading)loading=(async()=>{
+   if(typeof DecompressionStream==='undefined')throw new Error('이 브라우저는 압축 데이터를 풀 수 없습니다. 최신 Chrome·Edge·Safari에서 사용하세요.');
+   const r=await fetch('ledger.b64');if(!r.ok)throw new Error('건축물대장 데이터를 불러오지 못했습니다 (HTTP '+r.status+')');
+   const b64=(await r.text()).trim();const bin=Uint8Array.from(atob(b64),c=>c.charCodeAt(0));
+   const d=JSON.parse(await new Response(new Blob([bin]).stream().pipeThrough(new DecompressionStream('gzip'))).text());
+   G=d.g;U=d.u;E=d.e;FD=d.f||[];FUs=d.fu||[];R=d.r;
+   for(let i=0;i<R.length;i++){const g=R[i][0];if(gS[g]===undefined)gS[g]=i;gE[g]=i+1}
+  })().catch(e=>{loading=null;throw e});
+  return loading;
+ }
+ function buildRoadIdx(){if(roadIdx)return;roadIdx=new Map();
+  for(let i=0;i<R.length;i++){const rd=R[i][4];if(!rd)continue;const nm=rd.split(' ')[0];let a=roadIdx.get(nm);if(!a)roadIdx.set(nm,a=[]);a.push(i)}}
+ function parseQ(q){
+  const toks=q.trim().replace(/\s+/g,' ').split(' ').filter(Boolean);let lot=null,rest=toks;
+  if(toks.length){const m=toks[toks.length-1].match(/^(산)?(\d+)(?:-(\d+))?(?:번지|번)?$/);
+   if(m){lot={san:m[1]?1:0,bun:+m[2],ji:+(m[3]||0)};rest=toks.slice(0,-1)}}
+  if(rest.length&&rest[rest.length-1]==='산'){if(lot)lot.san=1;rest=rest.slice(0,-1)}
+  return{lot,rest,raw:q.trim()};
+ }
+ const isRoad=t=>/(로|길)(\d+(번길)?)?$/.test(t)&&t.length>=2;
+ const isDong=t=>/(동|읍|면|리|가)$/.test(t)&&t.length>=2&&!isRoad(t);
+ const label=(dBun,dJi,exact)=>exact?'입력과 일치':dBun===0?'같은 본번, 부번 '+dJi+' 차이':'본번 '+dBun+' 차이';
+ function search(q){
+  const p=parseQ(q),out=[];
+  const road=p.rest.find(isRoad),dong=p.rest.find(isDong);
+  const regs=p.rest.filter(t=>t!==road&&t!==dong);
+  const gOK=(g,toks)=>toks.every(t=>G[g].includes(t));
+  if(road&&p.lot){buildRoadIdx();const list=roadIdx.get(road)||[];const by=new Map();
+   for(const i of list){const g=R[i][0];if(!gOK(g,regs))continue;const k=sgg(g);let a=by.get(k);if(!a)by.set(k,a=[]);a.push(i)}
+   for(const [k,arr] of by){const c=arr.map(i=>{const t=R[i][4].split(' ')[1]||'',m=t.match(/^(\d+)(?:-(\d+))?/),mb=m?+m[1]:0,mj=m?+(m[2]||0):0;
+     const db=Math.abs(mb-p.lot.bun),dj=Math.abs(mj-p.lot.ji);return{i,d:db*100000+dj,l:label(db,dj,db===0&&dj===0)}}).sort((a,b)=>a.d-b.d).slice(0,6);
+    out.push({name:k+' '+road,count:arr.length,c})}
+  }else if(dong){let gs=[];for(let g=0;g<G.length;g++){if(G[g].split(' ').includes(dong)&&gOK(g,regs))gs.push(g)}
+   if(!gs.length)for(let g=0;g<G.length;g++){if(G[g].includes(dong)&&gOK(g,regs))gs.push(g)}
+   for(const g of gs){const n=gE[g]-gS[g];let c=[];
+    if(p.lot){for(let i=gS[g];i<gE[g];i++){const r=R[i];const db=Math.abs(r[1]-p.lot.bun),dj=Math.abs(r[2]-p.lot.ji);
+      c.push({i,d:(r[3]!==p.lot.san?1e9:0)+db*100000+dj,l:label(db,dj,db===0&&dj===0&&r[3]===p.lot.san)})}
+     c.sort((a,b)=>a.d-b.d);c=c.slice(0,6)}
+    else{for(let i=gS[g];i<Math.min(gE[g],gS[g]+8);i++)c.push({i,d:0,l:'동 내 목록'})}
+    out.push({name:G[g],count:n,c})}
+  }else{const qq=p.raw.replace(/\s+/g,'');const c=[];
+   for(let i=0;i<R.length&&c.length<30;i++){const r=R[i];const f=FD[i];const nm=(f&&f[3]&&f[3][0]&&f[3][0][0])||r[5];if(nm&&nm.replace(/\s+/g,'').includes(qq))c.push({i,d:0,l:'건물명 일치'})}
+   if(c.length)out.push({name:'건물명 검색',count:c.length,c})}
+  out.sort((a,b)=>(a.c[0]?a.c[0].d:9e12)-(b.c[0]?b.c[0].d:9e12)||b.count-a.count);
+  return out.slice(0,5);
+ }
+ const bldOf=i=>{const f=FD[i];if(!f||!f[3]||!f[3].length)return null;return f[3].find(x=>x[1]>0)||f[3][0]};
+ function brief(i){const r=R[i],b=bldOf(i);const nm=(b&&b[0])||r[5]||'(이름 없음)';
+  return{i,name:nm,addr:addr(r),road:r[4]?sgg(r[0])+' '+r[4]:'',use:U[r[6]],up:b&&b[1]>0?b[1]:null,dn:b?b[2]:0,gfa:b&&b[3]?b[3]:0}}
+ function fill(i){
+  const r=R[i],b=bldOf(i),up=b&&b[1]>0?b[1]:null,dn=b?b[2]:0;
+  const ground=up?Math.min(30,up):null,under=Math.min(5,dn||0);
+  let gfa=b&&b[3]?b[3]:(r[10]?Math.round(r[10]/Math.max(r[11],1)):0);
+  return{name:(b&&b[0])||r[5]||'',address:addr(r)+(r[4]?' ('+sgg(r[0])+' '+r[4]+')':''),use:useKey(U[r[6]]+','+E[r[7]]),ground,under,gfa,
+   geoQ:r[4]?sgg(r[0])+' '+r[4]:G[r[0]]+' '+r[1]+(r[2]?'-'+r[2]:'')};
+ }
+ return{load,search,brief,fill,ready:()=>!!R};
+})();
+async function geocode(q){
+ const r=await fetch('https://nominatim.openstreetmap.org/search?format=json&limit=1&countrycodes=kr&accept-language=ko&q='+encodeURIComponent(q));
+ if(!r.ok)throw new Error('좌표 서버 응답 오류 (HTTP '+r.status+')');
+ const a=await r.json();if(!a.length)return null;return{lat:(+a[0].lat).toFixed(6),lng:(+a[0].lon).toFixed(6)};
+}
+function lgBox(){
+ const L=S.lg||{q:''};
+ let h='<div class="card" style="display:grid;gap:8px"><h3 style="margin:0">건축물대장에서 찾기</h3><div class="small">도로명+번지(예: 판교역로 235), 동+지번(예: 정자동 178-1), 또는 건물명으로 찾아 선택하면 건물 이름·주소·주 용도·층수·층별 면적이 채워집니다. 같은 동 이름이 여러 곳이면 시·구를 앞에 쓰세요(예: 성남시 분당구 정자동 178-1). 건물주 계정은 대장에 없으므로 아래에서 직접 선택하세요.</div>'+
+  '<div class="row"><input type="text" id="lgq" data-lgq style="flex:1;min-width:180px" placeholder="주소 또는 건물명" value="'+esc(L.q)+'"><button class="btn blue sm" type="button" id="lgsearch"'+(L.busy?' disabled':'')+'>'+(L.busy?'찾는 중…':'찾기')+'</button></div>';
+ if(L.err)h+='<div class="msg">'+esc(L.err)+'</div>';
+ if(L.res){
+  if(!L.res.length)h+='<div class="small">결과가 없습니다. 대장 데이터에는 근린생활·판매·업무·숙박·위락·문화집회·운동·의료·관광휴게 시설이 있는 대지만 들어 있습니다. 그 밖의 건물은 아래 칸에 직접 입력하세요.</div>';
+  L.res.forEach(g=>{h+='<div><div class="small" style="font-weight:700;margin:4px 0">'+esc(g.name)+' <span style="font-weight:400">('+g.count+'곳)</span></div><div style="display:grid;gap:6px">'+
+   g.c.map(c=>{const b=LG.brief(c.i);return'<button type="button" class="btn ghost" data-lgpick="'+c.i+'" style="text-align:left;display:block;height:auto;padding:8px 10px"><b>'+esc(b.name)+'</b> <span class="small">· '+esc(c.l)+'</span><br><span class="small">'+esc(b.addr)+(b.road?' · '+esc(b.road):'')+'<br>'+esc(b.use)+(b.up?' · 지상 '+b.up+'층'+(b.dn?' / 지하 '+b.dn+'층':''):' · 층수 미확인')+(b.gfa?' · 연면적 '+Math.round(b.gfa).toLocaleString('ko-KR')+'㎡':'')+'</span></button>'}).join('')+'</div></div>'});
+ }
+ return h+'</div>';
+}
+async function lgRun(){
+ const L=S.lg||(S.lg={q:''});const q=(L.q||'').trim();if(!q){L.err='주소나 건물명을 입력하세요.';return render()}
+ L.busy=true;L.err='';L.res=null;render();
+ try{await LG.load();L.res=LG.search(q)}catch(e){L.err=e.message||String(e)}
+ L.busy=false;render();
+}
+async function lgPick(i){
+ const f=LG.fill(+i),b=S.bf;if(!b)return;
+ b.name=f.name||b.name;b.address=f.address;b.use=f.use;
+ let note='';
+ if(f.ground){b.ground=f.ground;b.under=f.under;const fl=mkFloors(f.ground,f.under);b.areas={};const each=f.gfa?Math.max(10,Math.round(f.gfa/fl.length/10)*10):300;fl.forEach(x=>b.areas[x]=each);
+  note='층별 바닥면적은 연면적('+Math.round(f.gfa).toLocaleString('ko-KR')+'㎡)을 층수로 나눈 추정값이니 도면과 대조해 고치세요. '}
+ else note='이 대지는 층수 정보가 없어 층수·면적은 그대로 두었습니다. 직접 입력하세요. ';
+ S.lg=null;setMsg('건축물대장에서 불러왔습니다. '+note,true);render();
+ try{const g=await geocode(f.geoQ);if(g&&S.bf===b){b.lat=g.lat;b.lng=g.lng;setMsg('건축물대장에서 불러왔습니다. '+note+'좌표는 지도 검색값(근사)이니 건물 앞에서 "현재 위치를 건물 좌표로"로 보정하세요.',true);render()}}catch(_){}
+}
+function bfFrom(b){const g=(b.floors||[]).filter(f=>!isUnder(f)).length,u=(b.floors||[]).filter(isUnder).length;return Object.assign({},clone(b),{ground:g,under:u,lat:b.lat==null?'':b.lat,lng:b.lng==null?'':b.lng,radius:b.radius||100})}
+function aBld(){
+ let h='<div><div class="kick">ADMIN</div><h2>건물 관리</h2><p class="lead">점검 대상 건물과 층별 면적, 용도를 등록합니다. 이 값으로 층별 필수 비치물품이 산출됩니다. 위치(좌표)를 넣으면 현장 반경 안에서만 점검 입력이 열립니다. 수정은 이후에 만드는 작업부터 적용됩니다.</p></div>'+flash();
+ const f=S.bf;
+ if(f){
+  const fl=mkFloors(+f.ground||0,+f.under||0);
+  h+=lgBox();
+  h+='<form class="card" id="fBld" style="display:grid;gap:12px"><h3 style="margin:0">'+(f.id?'건물 수정':'건물 등록')+'</h3><div class="fgrid">'+
+   '<label class="fld"><span>건물 이름</span><input type="text" data-bf="name" value="'+esc(f.name)+'" required></label><label class="fld"><span>주소</span><input type="text" data-bf="address" value="'+esc(f.address)+'"></label>'+
+   '<label class="fld"><span>주 용도</span><select data-bf="use">'+Object.keys(USES).map(u=>'<option'+(u===f.use?' selected':'')+'>'+u+'</option>').join('')+'</select></label>'+
+   '<label class="fld"><span>건물주 계정</span><select data-bf="ownerUid"><option value="">미지정</option>'+owners().map(u=>'<option value="'+esc(u.uid)+'"'+(f.ownerUid===u.uid?' selected':'')+'>'+esc(u.name)+' ('+esc(u.id)+')</option>').join('')+'</select></label>'+
+   '<label class="fld"><span>지상 층수</span><input type="number" min="1" max="30" data-bfn="ground" value="'+esc(f.ground)+'"></label><label class="fld"><span>지하 층수</span><input type="number" min="0" max="5" data-bfn="under" value="'+esc(f.under)+'"></label>'+
+   '<label class="fld"><span>층별 계단 수</span><input type="number" min="1" max="6" data-bf="stairs" value="'+esc(f.stairs)+'"></label></div>'+
+   '<label class="cb"><input type="checkbox" data-bfc="fire2"'+(f.fire2?' checked':'')+'><span>주요구조부 내화구조이고 벽·반자 마감이 불연·준불연·난연 재료 (소화기 면적 기준 2배 적용)</span></label>'+
+   '<div><div class="small" style="margin-bottom:6px">층별 바닥면적 (㎡)</div><div class="row">'+fl.map(x=>'<label class="fld" style="width:96px"><span style="font-family:var(--mono)">'+x+'</span><input type="number" min="0" step="10" data-bfa="'+x+'" value="'+esc(f.areas[x]==null?300:f.areas[x])+'"></label>').join('')+'</div></div>'+
+   '<div class="fgrid"><label class="fld"><span>위도</span><input type="text" data-bf="lat" value="'+esc(f.lat)+'" inputmode="decimal" placeholder="예: 37.4012"></label><label class="fld"><span>경도</span><input type="text" data-bf="lng" value="'+esc(f.lng)+'" inputmode="decimal" placeholder="예: 127.1087"></label><label class="fld"><span>점검 허용 반경 (m)</span><input type="number" min="20" max="1000" data-bf="radius" value="'+esc(f.radius)+'"></label></div>'+
+   '<div class="row"><button class="btn ghost sm" type="button" id="bfgeo">현재 위치를 건물 좌표로</button><button class="btn ghost sm" type="button" id="bfgc">주소로 좌표 찾기</button><span class="small">건물 앞에서 눌러 좌표를 채웁니다. 비워 두면 위치 제한이 없습니다.</span></div>'+
+   '<div class="row"><button class="btn blue" type="submit">저장</button><button class="btn ghost" type="button" id="bfcancel">취소</button></div></form>';
+ }else h+='<div class="row"><button class="btn blue" id="bldnew">+ 건물 등록</button></div>';
+ h+=A.blds.length?'<div class="list">'+A.blds.map(b=>{const ow=A.users.find(u=>u.uid===b.ownerUid);return'<div class="card"><div class="row"><div><b>'+esc(b.name)+'</b><div class="small">'+esc(b.address||'-')+' · '+esc(b.use)+' · '+(b.floors||[]).length+'개 층 · 연면적 '+(b.floors||[]).reduce((a,x)=>a+(+b.areas[x]||0),0).toLocaleString()+'㎡ · 건물주 '+esc(ow?ow.name:'미지정')+' · '+(b.lat!=null&&b.lat!==''?'위치 설정됨 ('+(b.radius||100)+' m)':'위치 제한 없음')+'</div></div><span class="sp"></span><button class="btn ghost sm" data-bldedit="'+esc(b.id)+'">수정</button><button class="btn '+(ARM==='b:'+b.id?'bad':'ghost')+' sm" data-blddel="'+esc(b.id)+'">'+(ARM==='b:'+b.id?'삭제 확인':'삭제')+'</button></div></div>'}).join('')+'</div>':'<div class="notice blue">등록된 건물이 없습니다.</div>';
+ return h;
+}
+/* 사용자 */
+function aUsr(){
+ let h='<div><div class="kick">ADMIN</div><h2>사용자 관리</h2><p class="lead">점검자·관리자·건물주 계정을 만듭니다. 계정은 관리자만 만들 수 있고, 만든 아이디와 비밀번호를 본인에게 전달하세요. 비밀번호는 본인이 로그인 후 변경할 수 있습니다.</p></div>'+flash();
+ h+='<form class="card" id="fUser" style="display:grid;gap:12px"><h3 style="margin:0">계정 만들기</h3><div class="fgrid"><label class="fld"><span>구분</span><select name="role"><option value="inspector">점검자</option><option value="owner">건물주</option><option value="admin">관리자</option></select></label><label class="fld"><span>이름</span><input type="text" name="name" required></label><label class="fld"><span>아이디 (영문·숫자·._- 3~20자)</span><input type="text" name="id" required autocapitalize="none" autocomplete="off"></label><label class="fld"><span>초기 비밀번호 (6자 이상)</span><input type="text" name="pw" required minlength="6" autocomplete="off"></label><label class="fld"><span>연락처 (선택)</span><input type="tel" name="phone"></label></div><div class="row"><button class="btn blue" type="submit"'+(S.busy?' disabled':'')+'>계정 만들기</button></div></form>';
+ h+='<div class="tw"><table><tr><th>이름</th><th>아이디</th><th>구분</th><th>연락처</th><th>상태</th><th></th></tr>'+A.users.map(u=>'<tr><td><b>'+esc(u.name)+'</b></td><td class="mono">'+esc(u.id)+'</td><td>'+ROLES[u.role]+'</td><td>'+esc(u.phone||'')+'</td><td><span class="pill p-'+(u.active?'ok':'no')+'">'+(u.active?'사용 중':'중지')+'</span></td><td>'+(u.uid===A.user.uid?'<span class="small">본인</span>':'<button class="btn ghost sm" data-uact="'+esc(u.uid)+'">'+(u.active?'사용 중지':'다시 사용')+'</button>')+'</td></tr>').join('')+'</table></div>';
+ return h;
+}
+/* 리포트 */
+function aRep(){
+ const sel=A.reports.find(r=>r.id===S.rep)||A.reports[0];
+ if(!sel)return'<div><div class="kick">ADMIN</div><h2>제출 리포트</h2></div><div class="notice blue">제출된 리포트가 없습니다.</div>';
+ const fx=sel.fixes||{},nf=sel.defects.filter((x,i)=>fx[i]).length;
+ let h='<div><div class="kick">ADMIN</div><h2>제출 리포트</h2></div>'+flash()+'<div class="ins" style="grid-template-columns:minmax(0,300px) minmax(0,1fr)"><div class="list">'+A.reports.map(r=>'<button class="lrow" data-rep="'+esc(r.id)+'" aria-pressed="'+(r.id===sel.id)+'"><span><b>'+esc(r.bldName)+'</b><br><span class="small">'+esc(r.id)+' · '+esc(r.inspName)+' · '+esc(r.at)+'</span></span><span class="pill p-'+(repCls[r.status]||'no')+'">'+esc(r.status)+'</span></button>').join('')+'</div><div class="list" style="gap:12px">';
+ h+='<div class="card"><div class="row"><h3 style="margin:0">'+esc(sel.bldName)+' · '+esc(sel.id)+'</h3><span class="sp"></span><span class="pill p-no">위치 '+esc(sel.loc)+'</span></div><p class="small" style="margin:4px 0 8px">점검자 '+esc(sel.inspName)+' · '+esc(sel.at)+' · 사진 '+sel.photoCount+'장'+(sel.status==='승인'?' · 조치 '+nf+'/'+sel.defects.length:'')+'</p><div class="row">'+(sel.floors||Object.keys(sel.states)).map(f=>'<div style="text-align:center"><div class="small">'+esc(f)+'</div><span class="heat '+heatCls[sel.states[f]||'todo']+'">'+stTxt[sel.states[f]||'todo']+'</span></div>').join('')+'</div></div>';
+ h+='<div><h3>결함·보수 항목 ('+sel.defects.length+')</h3>'+(sel.defects.length?'<div class="dfx">'+sel.defects.map((x,i)=>dfCard(x,fx[i])).join('')+'</div>':'<div class="notice blue">결함 없음</div>')+'</div>';
+ if((sel.extra||[]).length)h+='<div class="card"><h3>그 밖의 점검 사진 ('+sel.extra.length+')</h3><div class="photos">'+sel.extra.map(e=>'<div class="ph" title="'+esc(e.f+' '+e.name)+'"><img src="'+e.p+'" alt="'+esc(e.f+' '+e.name)+'" data-src="'+e.p+'"></div>').join('')+'</div></div>';
+ if(sel.sig)h+='<div class="card"><h3>점검자 서명</h3><img src="'+sel.sig+'" alt="서명" style="max-width:260px;background:#fff;border:1px solid var(--line);border-radius:8px"></div>';
+ h+='<div class="card"><h3>관리자 조치</h3><textarea id="cmt" placeholder="의견·보완 요청 사항 (보완 요청은 사유 필수)"'+(sel.status==='승인'?' disabled':'')+'>'+esc(sel.comment||'')+'</textarea><div class="row" style="margin-top:10px">'+['확인 중','보완 요청','승인'].map(a=>'<button class="btn '+(a==='승인'?'blue':'ghost')+' sm" data-act="'+a+'"'+((NEXT[sel.status]||[]).includes(a)?'':' disabled')+'>'+a+'</button>').join('')+'<button class="btn ghost sm" data-print="1">인쇄·PDF 저장</button></div>'+(sel.status==='보완 요청'?'<div class="small" style="margin-top:8px">점검자가 수정본을 다시 제출할 때까지 처리할 수 없습니다.</div>':'')+(sel.status==='승인'?'<div class="small" style="margin-top:8px;color:var(--blue)">승인된 리포트는 수정할 수 없고 해당 건물주 계정에 공개됩니다'+(sel.ownerUid?'.':' — 건물에 건물주 계정이 지정되어 있지 않아 아직 아무에게도 보이지 않습니다.')+'</div>':'')+'</div></div></div>';
+ return h;
+}
+function aRule(){
+ const U=USES;
+ return'<div><div class="kick">ADMIN</div><h2>기준·규칙</h2><p class="lead">앱이 필수 수량과 점검 항목을 산출하는 데 쓰는 기준입니다. "원문 대조 필요" 표시는 소방청 원문과 대조해 확정해야 하는 값입니다.</p></div>'+
+ '<div class="notice red"><b>검증 상태</b> · 시행령 별표 4의 설치대상 수치는 2차 자료(요약 페이지)로, 분말소화기 10년·발신기 수평거리 25 m는 일부 자료로 확인했습니다. 소화기 능력단위·보행거리, 감지기·경종·유도등 산정, 소방청 점검표 문구는 원문을 열람하지 못해 대조가 필요합니다. 확정 전 소방 전문가 검수를 거치세요.</div>'+
+ '<div class="tw"><table><tr><th>용도</th><th class="c">소화기 1능력단위당 면적(㎡)</th><th class="c">자탐설비 연면적</th><th>스프링클러</th></tr>'+Object.keys(U).map(k=>'<tr><td>'+k+'</td><td class="c">'+U[k].ext+'</td><td class="c">'+(U[k].auto==='all'?'모든 층':'≥ '+U[k].auto)+'</td><td class="small">'+(U[k].spr.total?'합계 ≥ '+U[k].spr.total+'㎡ 모든 층 · ':'')+'지하·4층 이상 층 ≥ '+U[k].spr.sub+'㎡</td></tr>').join('')+'</table></div>'+
+ '<div class="tw"><table><tr><th>설비</th><th>산출·점검 근거</th><th>검증 상태</th><th>점검 항목</th></tr>'+ORDER.map(k=>'<tr><td><b>'+CK[k].n+'</b></td><td class="small" style="min-width:240px">'+esc(CK[k].basis)+'</td><td class="small">'+esc(CK[k].v)+'</td><td class="small">'+CK[k].c.map(c=>esc(c[0])+(c[2]?'(동작)':'')).join(' · ')+'</td></tr>').join('')+'</table></div>';
+}
+function aB3d(){
+ const jobs=A.jobs.filter(j=>j.insp&&j.bld);
+ let h='<div><div class="kick">ADMIN</div><h2>3D 건물 열람</h2><p class="lead">점검 작업을 골라 층별 점검 상태를 3D로 봅니다. 진행 중인 작업은 점검자의 입력이 그대로 반영됩니다.</p></div>';
+ if(!jobs.length)return h+'<div class="notice blue">아직 점검이 시작된 작업이 없습니다.</div>';
+ const j=jobs.find(x=>x.id===S.jobSel)||jobs[0];
+ return h+'<label class="fld" style="max-width:420px"><span>작업</span><select id="jobsel">'+jobs.map(x=>'<option value="'+esc(x.id)+'"'+(x.id===j.id?' selected':'')+'>'+esc(x.bldName)+' · '+esc(x.date||'')+' · '+esc(x.inspName||'미배정')+' ('+esc(x.status)+')</option>').join('')+'</select></label>'+
+  withCtx(j,()=>{
+   const sm=summarize(),f=S.floor,F=sm[f];
+   const list=FL.map(x=>'<button data-floor="'+x+'" aria-pressed="'+(x===f)+'"><b style="font-family:var(--mono)">'+x+'</b><span><span class="small">'+sm[x].done+'/'+sm[x].n+' 항목</span><span class="bar"><i style="width:'+(sm[x].n?sm[x].done/sm[x].n*100:0)+'%"></i></span></span><span class="pill p-'+pillOf(sm[x].state)+'">'+stTxt[sm[x].state]+'</span></button>').join('');
+   return'<div class="v3"><div>'+ctl()+stage3d(sm)+LEG+'</div><aside class="card"><h3>층별 진행</h3><div class="fl-list">'+list+'</div><h3 style="margin-top:14px">'+f+' 설비 현황</h3><div class="list" style="gap:6px">'+F.items.map(x=>'<div class="row small"><span><b>'+CK[x.it.k].n+'</b> '+(x.st==='na'?'':(x.it.q?'필수 '+x.it.q+' / 확인 '+(rec(f,x.it.k).qty||'-'):''))+'</span><span class="sp"></span><span class="pill p-'+({ok:'ok',warn:'warn',bad:'bad',short:'bad',miss:'bad',todo:'no',na:'no'}[x.st])+'">'+({ok:'정상',warn:'보수 필요',bad:'불량',short:'수량 부족',miss:'미비치',todo:'점검 전',na:'해당 없음'}[x.st])+'</span></div>').join('')+'</div></aside></div>';
+  });
+}
+
+/* ================= 건물주 ================= */
+function vOwner(){
+ let h='<div><div class="kick">OWNER</div><h2>점검 결과 열람</h2><p class="lead">관리자가 승인한 내 건물의 점검 리포트입니다. 결함은 조치한 뒤 "조치 완료"로 표시하면 관리자 화면에도 반영됩니다.</p></div>'+flash();
+ h+='<div class="card"><h3>내 건물</h3>'+(A.blds.length?A.blds.map(b=>'<div class="small"><b>'+esc(b.name)+'</b> · '+esc(b.address||'-')+' · '+esc(b.use)+'</div>').join(''):'<div class="small">연결된 건물이 없습니다. 관리자에게 건물주 계정 연결을 요청하세요.</div>')+'</div>';
+ if(!A.reports.length)return h+'<div class="notice blue">승인된 리포트가 아직 없습니다.</div>';
+ return h+A.reports.map(r=>{const fx=r.fixes||{},n=r.defects.filter((x,i)=>fx[i]).length;
+  return'<div class="card"><div class="row"><h3 style="margin:0">'+esc(r.bldName)+' · '+esc(r.id)+'</h3><span class="sp"></span><span class="pill p-'+(n===r.defects.length?'ok':'warn')+'">조치 '+n+'/'+r.defects.length+'</span></div><p class="small" style="margin:4px 0 8px">점검자 '+esc(r.inspName)+' · '+esc(r.at)+' · 사진 '+r.photoCount+'장</p><div class="row" style="margin-bottom:10px">'+(r.floors||Object.keys(r.states)).map(f=>'<div style="text-align:center"><div class="small">'+esc(f)+'</div><span class="heat '+heatCls[r.states[f]||'todo']+'">'+stTxt[r.states[f]||'todo']+'</span></div>').join('')+'</div>'+(r.defects.length?'<div class="dfx">'+r.defects.map((x,i)=>'<div>'+dfCard(x,fx[i])+(fx[i]?'':'<textarea id="fx-'+esc(r.id)+'-'+i+'" placeholder="조치 내용 (예: 소화기 2개 추가 비치, 업체명·날짜)" style="margin-top:6px"></textarea>')+'<div style="margin-top:6px"><button class="btn ghost sm" data-fix="'+esc(r.id)+':'+i+'">'+(fx[i]?'조치 완료 취소':'조치 완료로 표시')+'</button></div></div>').join('')+'</div>':'<div class="notice blue">결함 없음</div>')+'</div>'}).join('');
+}
+
+/* ================= 동작 ================= */
+let ARM='',ARMT=0;
+/* confirm() 대신 화면 안 2단계 확인: 처음 누르면 '삭제 확인'으로 바뀌고, 5초 안에 한 번 더 누르면 실행 */
+function armed(key){if(ARM===key){clearTimeout(ARMT);ARM='';return true}ARM=key;clearTimeout(ARMT);ARMT=setTimeout(()=>{ARM='';render()},5000);render();return false}
+function setMsg(t,ok){S.msg=t||'';S.msgOk=!!ok}
+async function guard(fn){try{S.busy=true;await fn()}catch(e){setMsg(emsg(e),false)}finally{S.busy=false;render()}}
+async function resizePhoto(file,max,q){return new Promise(res=>{const fr=new FileReader();fr.onload=()=>reenc(fr.result,max,q).then(res);fr.onerror=()=>res(null);fr.readAsDataURL(file)})}
+function reenc(src,max,q){return new Promise(res=>{const im=new Image();im.onload=()=>{const s=Math.min(1,max/Math.max(im.width,im.height)),w=Math.round(im.width*s),h=Math.round(im.height*s),c=document.createElement('canvas');c.width=w;c.height=h;c.getContext('2d').drawImage(im,0,0,w,h);res(c.toDataURL('image/jpeg',q))};im.onerror=()=>res(null);im.src=src})}
+function lightbox(src){const l=$('#lbx');l.innerHTML='<div class="lb" role="dialog" aria-label="사진 확대"><img src="'+src+'" alt="확대 사진"><button class="btn" id="lbc">닫기</button></div>';l.onclick=ev=>{if(ev.target.closest('.lb')&&(ev.target.id==='lbc'||ev.target.classList.contains('lb')))l.innerHTML=''}}
+const setFloor=f=>{S.floor=f;S.afloor=f;S.focus=null};
+
+async function submitReport(){
+ const j=A.jobs.find(x=>x.id===S.job);if(!j)return;
+ const sm=summarize(),d=defects(sm),st={};FL.forEach(f=>st[f]=sm[f].state);
+ const defKeys=new Set(d.map(x=>x.f+'|'+x.k)),extra=[];
+ FL.forEach(f=>sm[f].items.forEach(x=>{if(x.st==='na')return;const r=rec(f,x.it.k);if(!defKeys.has(f+'|'+x.it.k))r.photos.forEach(p=>extra.push({f,name:CK[x.it.k].n,p}))}));
+ const n=new Date(),loc=S.dist!=null?S.dist+' m · ±'+S.acc+' m':'위치 제한 없음';
+ const prev=j.reportId&&A.reports.find(r=>r.id===j.reportId&&r.status==='보완 요청');
+ const rep={id:prev?prev.id:'R-'+n.getFullYear().toString().slice(2)+pad(n.getMonth()+1)+pad(n.getDate())+'-'+rnd().toUpperCase(),ver:prev?(prev.ver||1)+1:1,jobId:j.id,bldId:j.bldId,bldName:j.bldName,ownerUid:j.ownerUid||'',inspUid:A.user.uid,inspName:A.user.name,at:stamp(),ts:Date.now(),status:'접수',loc,floors:FL.slice(),states:st,defects:d,extra,photoCount:d.reduce((a,x)=>a+x.photos.length,0)+extra.length,comment:'',sig:S.sig,insp:compactInsp(),fixes:{}};
+ const size=()=>JSON.stringify(rep).length;
+ if(size()>900000){
+  const shrink=async(max,q)=>{for(const x of rep.defects)x.photos=await Promise.all(x.photos.map(p=>reenc(p,max,q).then(r=>r||p)));for(const e of rep.extra)e.p=await reenc(e.p,max,q).then(r=>r||e.p)};
+  await shrink(480,.55);
+  if(size()>900000)await shrink(320,.45);
+  if(size()>980000)throw new Error('사진 용량이 너무 큽니다. 사진 수를 줄이고 다시 제출하세요.');
+ }
+ await D.set('reports',rep.id,rep);
+ await D.update('jobs',j.id,{status:'제출됨',reportId:rep.id,submittedAt:Date.now(),insp:rep.insp,progress:{at:Date.now(),pct:100,states:st,def:d.length}});
+ try{localStorage.removeItem(dkey(j.id))}catch(_){}
+ S.submitted=rep.id;setMsg('결함 '+d.length+'건 · 사진 '+rep.photoCount+'장',true);stopGeo();
+}
+
+document.addEventListener('click',e=>{
+ const t=e.target,c=s=>t.closest(s);let b;
+ if(b=c('[data-ltab]')){S.login.tab=b.dataset.ltab;S.login.msg='';return render()}
+ if(t.id==='reload')return location.reload();
+ if(t.id==='logout')return doLogout();
+ if(t.id==='pwbtn'){S.pwOpen=!S.pwOpen;setMsg('');return render()}
+ if(t.id==='pwcancel'){S.pwOpen=false;return render()}
+ if(b=c('[data-open]'))return openJob(b.dataset.open);
+ if(b=c('[data-resp]')){const[id,v]=b.dataset.resp.split(':'),j=A.jobs.find(x=>x.id===id);if(!j||j.status!=='배정'||j.inspUid!==A.user.uid)return;
+  if(v==='no'&&!confirm('이 배정을 거절할까요? 작업은 관리자에게 미배정으로 돌아갑니다.'))return;
+  return guard(async()=>{if(v==='ok'){await D.update('jobs',j.id,{status:'수락',acceptedAt:Date.now()});setMsg('배정을 수락했습니다. 점검을 시작할 수 있습니다.',true)}
+   else{await D.update('jobs',j.id,{status:'미배정',inspUid:'',inspName:'',declinedBy:A.user.name,declinedAt:Date.now()});setMsg('배정을 거절했습니다.',true)}})}
+ if(b=c('[data-step]')){const s=+b.dataset.step;if(s===0)leaveJob();else S.step=s;return render()}
+ if(b=c('[data-tab]')){S.tab=b.dataset.tab;setMsg('');return render()}
+ if(b=c('[data-mk]')){if(moved>=4){moved=0;return}setFloor(b.dataset.f);S.focus=b.dataset.mk;render();if(S.role==='user')setTimeout(()=>{const x=document.getElementById('it-'+S.focus);x&&x.scrollIntoView({behavior:'smooth',block:'center'})},30);return}
+ if(b=c('[data-fl]')){if(moved>=4){moved=0;return}setFloor(b.dataset.fl);return render()}
+ if(b=c('[data-view]')){S.view=b.dataset.view;return render()}
+ if(b=c('[data-lay]')){const k=b.dataset.lay;S.layers[k]=S.layers[k]===false;try{localStorage.setItem('fa-layers',JSON.stringify(S.layers))}catch(_){}return render()}
+ if(b=c('[data-floor]')){setFloor(b.dataset.floor);return render()}
+ if(b=c('[data-nav]')){if(b.dataset.nav){setFloor(b.dataset.nav);render();scrollTo(0,0)}return}
+ if(t.id==='go2'){S.step=2;return render()}
+ if(t.id==='go3'||t.id==='back2'){S.step=t.id==='go3'?3:2;return render()}
+ if(b=c('[data-has]')){const r=rec(S.floor,b.dataset.has);r.has=b.dataset.v;if(r.has==='no')r.qty='0';return render()}
+ if(b=c('[data-ck]')){const[k,i]=b.dataset.ck.split(':');rec(S.floor,k).r[+i]=+b.dataset.v;return render()}
+ if(b=c('[data-del]')){const[k,i]=b.dataset.del.split(':');rec(S.floor,k).photos.splice(+i,1);return render()}
+ if(b=c('[data-lb]')){const[k,i]=b.dataset.lb.split(':');return lightbox(rec(S.floor,k).photos[+i])}
+ if(t.tagName==='IMG'&&t.dataset.src)return lightbox(t.dataset.src);
+ if(t.id==='sigclear'){S.sig='';paintSig();const s=$('#submit');if(s)s.disabled=true;return}
+ if(t.id==='submit'){if(S.busy)return;guard(submitReport);render();return}
+ if(t.id==='again'){leaveJob();setMsg('');return render()}
+ /* 관리자 */
+ if(b=c('[data-rep]')){S.rep=b.dataset.rep;setMsg('');return render()}
+ if(b=c('[data-act]')){const r=A.reports.find(x=>x.id===S.rep)||A.reports[0];if(!r)return;const st=b.dataset.act,cm=(($('#cmt')||{}).value||'').trim();
+  if(!(NEXT[r.status]||[]).includes(st)){setMsg('"'+r.status+'" 상태에서는 "'+st+'" 처리를 할 수 없습니다.');return render()}
+  if(st==='보완 요청'&&!cm){setMsg('보완 요청은 사유를 입력해야 합니다.');return render()}
+  return guard(async()=>{await D.update('reports',r.id,{status:st,comment:cm,reviewedAt:Date.now(),reviewedBy:A.user.name});await D.update('jobs',r.jobId,{status:st==='승인'?'승인':st==='보완 요청'?'보완 요청':'제출됨'});setMsg('"'+st+'" 처리했습니다.',true)})}
+ if(b=c('[data-print]'))return window.print();
+ if(b=c('[data-jdel]')){const id=b.dataset.jdel;if(!armed('j:'+id))return;return guard(async()=>{await D.del('jobs',id)})}
+ if(t.id==='bldnew'){S.bf=newBF();return render()}
+ if(t.id==='bfcancel'){S.bf=null;S.lg=null;return render()}
+ if(t.id==='lgsearch')return lgRun();
+ if(b=c('[data-lgpick]'))return lgPick(b.dataset.lgpick);
+ if(t.id==='bfgc'){const q=(S.bf.address||'').replace(/\s*\(.*\)\s*$/,'')||S.bf.name;if(!q){setMsg('주소를 먼저 입력하세요.');return render()}return guard(async()=>{const g=await geocode((S.bf.address.match(/\(([^)]+)\)/)||[])[1]||q);if(!g)throw new Error('좌표를 찾지 못했습니다. 건물 앞에서 현재 위치로 채우세요.');S.bf.lat=g.lat;S.bf.lng=g.lng;setMsg('지도 검색 좌표를 채웠습니다(근사). 건물 앞에서 현재 위치로 보정하세요.',true)})}
+ if(b=c('[data-bldedit]')){const x=A.blds.find(y=>y.id===b.dataset.bldedit);if(x){S.bf=bfFrom(x);render()}return}
+ if(b=c('[data-blddel]')){const id=b.dataset.blddel;if(!armed('b:'+id))return;return guard(async()=>{await D.del('buildings',id)})}
+ if(t.id==='bfgeo'){if(!navigator.geolocation){setMsg('위치를 지원하지 않는 기기입니다.');return render()}navigator.geolocation.getCurrentPosition(p=>{S.bf.lat=p.coords.latitude.toFixed(6);S.bf.lng=p.coords.longitude.toFixed(6);setMsg('현재 위치를 좌표로 채웠습니다 (정확도 ±'+Math.round(p.coords.accuracy)+' m).',true);render()},()=>{setMsg('위치를 가져오지 못했습니다. 위치 권한을 확인하세요.');render()},{enableHighAccuracy:true,timeout:20000});return}
+ if(b=c('[data-uact]')){const u=A.users.find(x=>x.uid===b.dataset.uact);if(!u)return;return guard(async()=>{await D.update('users',u.uid,{active:!u.active})})}
+ /* 건물주 */
+ if(b=c('[data-fix]')){const[rid,i]=b.dataset.fix.split(':');const r=A.reports.find(x=>x.id===rid);if(!r)return;const fx=Object.assign({},r.fixes||{});
+  if(fx[i])delete fx[i];else{const note=((document.getElementById('fx-'+rid+'-'+i)||{}).value||'').trim();if(!note){setMsg('조치 내용을 입력해야 완료로 표시할 수 있습니다.');return render()}fx[i]=note}
+  return guard(async()=>{await D.update('reports',rid,{fixes:fx})})}
+});
+document.addEventListener('submit',async e=>{
+ const f=e.target,fid=f.getAttribute&&f.getAttribute('id');if(!fid)return;e.preventDefault();
+ const fd=Object.fromEntries(new FormData(f).entries());
+ if(fid==='fLogin'){
+  const id=(fd.id||'').trim().toLowerCase();S.login.busy=true;S.login.msg='';render();
+  try{
+   const p=await D.login(id,fd.pw||'');const want={user:'inspector',admin:'admin',owner:'owner'}[S.login.tab];
+   if(p.role!==want){await D.logout();S.login.msg='이 계정은 '+ROLES[p.role]+' 계정입니다. 위에서 "'+({inspector:'점검자',admin:'관리자',owner:'건물주'}[p.role])+'"를 선택해 로그인하세요.';S.login.busy=false;return render()}
+   S.login.busy=false;return enter(p);
+  }catch(err){S.login.busy=false;S.login.msg=emsg(err);render()}
+  return;
+ }
+ if(fid==='fBoot'){
+  const id=(fd.id||'').trim().toLowerCase();
+  if(!ID_RE.test(id)){S.login.msg='아이디는 영문 소문자·숫자·._- 3~20자로 입력하세요.';return render()}
+  S.login.busy=true;S.login.msg='';render();
+  try{const p=await D.bootstrap({id,pw:fd.pw,name:(fd.name||'').trim()});S.login.busy=false;A.init=true;return enter(p)}
+  catch(err){S.login.busy=false;S.login.msg=emsg(err);render()}
+  return;
+ }
+ if(fid==='fPw'){return guard(async()=>{await D.changePw(fd.pw);S.pwOpen=false;setMsg('비밀번호를 변경했습니다.',true)})}
+ if(fid==='fUser'){
+  const id=(fd.id||'').trim().toLowerCase();
+  if(!ID_RE.test(id)){setMsg('아이디는 영문 소문자·숫자·._- 3~20자로 입력하세요.');return render()}
+  return guard(async()=>{await D.createUser({id,pw:fd.pw,name:(fd.name||'').trim(),role:fd.role,phone:(fd.phone||'').trim()});setMsg('"'+id+'" 계정을 만들었습니다. 아이디와 비밀번호를 본인에게 전달하세요.',true);f.reset&&f.reset()})
+ }
+ if(fid==='fBld'){
+  const b=S.bf,g=Math.max(1,Math.min(30,+b.ground||1)),u=Math.max(0,Math.min(5,+b.under||0)),floors=mkFloors(g,u);
+  if(!(b.name||'').trim()){setMsg('건물 이름을 입력하세요.');return render()}
+  const lat=b.lat===''?null:parseFloat(b.lat),lng=b.lng===''?null:parseFloat(b.lng);
+  if((lat==null)!==(lng==null)||(lat!=null&&(isNaN(lat)||isNaN(lng)||Math.abs(lat)>90||Math.abs(lng)>180))){setMsg('위도·경도를 둘 다 올바르게 입력하거나 둘 다 비워 두세요.');return render()}
+  const areas={};floors.forEach(x=>areas[x]=Math.max(0,+b.areas[x]||0));
+  const o={id:b.id||'B-'+Date.now().toString(36)+rnd(),name:b.name.trim(),address:(b.address||'').trim(),use:b.use,fire2:!!b.fire2,stairs:Math.max(1,Math.min(6,+b.stairs||2)),floors,areas,ownerUid:b.ownerUid||'',lat,lng,radius:Math.max(20,+b.radius||100),ts:Date.now()};
+  return guard(async()=>{await D.set('buildings',o.id,o);S.bf=null;setMsg('건물을 저장했습니다.',true)});
+ }
+ if(fid==='fJob'){
+  const b=A.blds.find(x=>x.id===fd.bld);if(!b)return;const ins=A.users.find(x=>x.uid===fd.insp);
+  const j={id:'J-'+Date.now().toString(36)+rnd(),bldId:b.id,bldName:b.name,ownerUid:b.ownerUid||'',bld:{name:b.name,address:b.address||'',use:b.use,fire2:!!b.fire2,stairs:b.stairs,floors:b.floors,areas:b.areas,lat:b.lat==null?null:b.lat,lng:b.lng==null?null:b.lng,radius:b.radius||100},date:fd.date,note:(fd.note||'').trim(),inspUid:ins?ins.uid:'',inspName:ins?ins.name:'',status:ins?'배정':'미배정',createdAt:Date.now(),progress:{pct:0,states:{},def:0,at:0}};
+  return guard(async()=>{await D.set('jobs',j.id,j);setMsg('작업을 만들었습니다.',true)});
+ }
+});
+document.addEventListener('keydown',e=>{if(e.key==='Enter'&&e.target.dataset&&e.target.dataset.lgq!==undefined){e.preventDefault();lgRun()}});
+document.addEventListener('input',e=>{
+ const t=e.target;
+ if(t.dataset.lgq!==undefined){(S.lg||(S.lg={})).q=t.value;return}
+ if(t.dataset.bf!==undefined&&S.bf){S.bf[t.dataset.bf]=t.value;return}
+ if(t.dataset.bfa!==undefined&&S.bf){S.bf.areas[t.dataset.bfa]=t.value;return}
+ if(t.dataset.note!==undefined&&t.tagName==='TEXTAREA'){rec(S.floor,t.dataset.note).note=t.value;persist()}
+});
+document.addEventListener('change',async e=>{
+ const t=e.target;
+ if(t.dataset.bfn&&S.bf){S.bf[t.dataset.bfn]=Math.max(t.dataset.bfn==='ground'?1:0,Math.min(t.dataset.bfn==='ground'?30:5,+t.value||0));const fl=mkFloors(+S.bf.ground,+S.bf.under);fl.forEach(x=>{if(S.bf.areas[x]==null)S.bf.areas[x]=300});return render()}
+ if(t.dataset.bfc&&S.bf){S.bf[t.dataset.bfc]=t.checked;return}
+ if(t.dataset.bf==='use'||t.dataset.bf==='ownerUid'){S.bf[t.dataset.bf]=t.value;return}
+ if(t.id==='gap'){S.gap=+t.value;return render()}
+ if(t.id==='ack'){S.ack=t.checked;return render()}
+ if(t.id==='jobsel'){S.jobSel=t.value;return render()}
+ if(t.dataset.job){const id=t.dataset.job,u=A.users.find(x=>x.uid===t.value);return guard(async()=>{await D.update('jobs',id,{inspUid:u?u.uid:'',inspName:u?u.name:'',status:u?'배정':'미배정'})})}
+ if(t.dataset.qty){rec(S.floor,t.dataset.qty).qty=t.value;return render()}
+ if(t.dataset.file){const k=t.dataset.file;for(const f of t.files){const d=await resizePhoto(f,640,.65);if(d)rec(S.floor,k).photos.push(d)}render()}
+});
+
+/* ================= 시작 ================= */
+(async function boot(){
+ render();
+ try{D=FB;A.mode=await FB.init()}
+ catch(e){A.fbErr=e.message;if(hostIsFirebase()){A.mode='blocked';return render()}D=Local;A.mode=await Local.init()}
+ try{A.init=await D.initialized()}catch(e){A.err=emsg(e);return render()}
+ try{const p=await D.restore();if(p)return enter(p)}catch(_){}
+ render();
+})();
+})();
+</script>
+<script>if('serviceWorker' in navigator&&location.protocol.startsWith('http')){addEventListener('load',()=>navigator.serviceWorker.register('sw.js').catch(()=>{}))}</script>
+</body>
+</html>
