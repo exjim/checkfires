@@ -30,7 +30,7 @@
 - `firestore.rules`, `tests/rules.test.js` — 보안 규칙과 규칙 시험
 - `design/` — 설계 문서: `wireframe-storyboard.html`(와이어프레임·수정 가능한 스토리보드·배치 검토 시안), `phone-app-standalone.html`(폰 앱 단일 파일 시험판, 샘플 데이터)
 - `firebase.json`, `.firebaserc`, `.github/workflows/` — 호스팅 설정과 자동 배포
-- `v3/` — 이전 버전 화면(보존용)
+- `v3/` — 건축물대장 연동판 화면(보존, 아래 관리자 웹 화면 설명 참고)
 
 ---
 
