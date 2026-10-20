@@ -130,5 +130,55 @@ service cloud.firestore {
           && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['fixes']);
       }
     }
+
+    // ───── 폰 앱 (m/) 전용 컬렉션: mbuildings · mjobs · mreports · mphotos · mmeta ─────
+    // 기존 buildings/jobs/reports 와 겹치지 않는다. 사용 중인 관리자(admin)·점검자(inspector)만 접근.
+    function isInspector() { return role() == 'inspector'; }
+    function changedOnly(keys) {
+      return request.resource.data.diff(resource.data).affectedKeys().hasOnly(keys);
+    }
+
+    // 건물: 관리자 전체 권한, 점검자는 조회와 배치 설치 기록(ly)만 수정
+    match /mbuildings/{id} {
+      allow read: if isAdmin() || isInspector();
+      allow create, delete: if isAdmin();
+      allow update: if isAdmin() || (isInspector() && changedOnly(['ly']));
+    }
+
+    // 작업: 점검자는 본인(who) 작업만 조회, 제출 전까지 결과(res)·상태 등만 수정
+    match /mjobs/{id} {
+      allow read: if isAdmin() || (isInspector() && resource.data.who == request.auth.uid);
+      allow create, delete: if isAdmin();
+      allow update: if isAdmin()
+        || (isInspector()
+            && resource.data.who == request.auth.uid
+            && request.resource.data.who == resource.data.who
+            && resource.data.status != '제출됨'
+            && changedOnly(['res', 'status', 'sub', 'rep']));
+    }
+
+    // 보고서: 점검자는 본인 작업의 보고서를 새로 만들고 조회만(수정 불가), 발송·확인 처리는 관리자
+    match /mreports/{id} {
+      allow read: if isAdmin() || (isInspector() && resource.data.by == request.auth.uid);
+      allow create: if isAdmin() || (isInspector() && request.resource.data.by == request.auth.uid);
+      allow update, delete: if isAdmin();
+    }
+
+    // 사진(작업·설비별 문서): 점검자는 본인 작업이 제출되기 전까지만 쓸 수 있음
+    match /mphotos/{id} {
+      allow read: if isAdmin() || (isInspector() && (resource == null || resource.data.who == request.auth.uid));
+      allow create, update: if isAdmin()
+        || (isInspector()
+            && request.resource.data.who == request.auth.uid
+            && get(/databases/$(database)/documents/mjobs/$(request.resource.data.jobId)).data.who == request.auth.uid
+            && get(/databases/$(database)/documents/mjobs/$(request.resource.data.jobId)).data.status != '제출됨');
+      allow delete: if isAdmin();
+    }
+
+    // 설정(점검 기준값·업체 정보)
+    match /mmeta/{doc} {
+      allow read: if isAdmin() || isInspector();
+      allow write: if isAdmin();
+    }
   }
 }

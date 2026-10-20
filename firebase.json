@@ -1,56 +1,123 @@
 {
-  "hosting": {
-    "public": ".",
-    "ignore": [
-      "firebase.json",
-      "README.md",
-      ".git/**",
-      "**/node_modules/**",
-      ".firebaserc",
-      ".github/**",
-      "firestore.rules"
-    ],
-    "cleanUrls": true,
-    "headers": [
-      {
-        "source": "/sw.js",
-        "headers": [
-          {
-            "key": "Cache-Control",
-            "value": "no-cache"
+  "hosting": [
+    {
+      "public": ".",
+      "ignore": [
+        "**/node_modules/**",
+        ".firebaserc",
+        ".git/**",
+        ".github/**",
+        "README.md",
+        "design/**",
+        "firebase.json",
+        "firestore.rules",
+        "functions/**",
+        "m/**",
+        "m/node_modules/**",
+        "tests/**"
+      ],
+      "cleanUrls": true,
+      "headers": [
+        {
+          "source": "/sw.js",
+          "headers": [
+            {
+              "key": "Cache-Control",
+              "value": "no-cache"
+            }
+          ]
+        },
+        {
+          "source": "/index.html",
+          "headers": [
+            {
+              "key": "Cache-Control",
+              "value": "no-cache"
+            }
+          ]
+        },
+        {
+          "source": "/manifest.webmanifest",
+          "headers": [
+            {
+              "key": "Content-Type",
+              "value": "application/manifest+json"
+            }
+          ]
+        },
+        {
+          "source": "/.well-known/assetlinks.json",
+          "headers": [
+            {
+              "key": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        }
+      ],
+      "target": "web"
+    },
+    {
+      "target": "app",
+      "public": "m",
+      "cleanUrls": true,
+      "ignore": [
+        "firebase.json",
+        "**/.*",
+        "**/node_modules/**",
+        "manifest.webmanifest.bak"
+      ],
+      "rewrites": [
+        {
+          "source": "/api/addr",
+          "function": {
+            "functionId": "addr",
+            "region": "asia-northeast3"
           }
-        ]
-      },
-      {
-        "source": "/index.html",
-        "headers": [
-          {
-            "key": "Cache-Control",
-            "value": "no-cache"
+        },
+        {
+          "source": "/api/ledger",
+          "function": {
+            "functionId": "ledger",
+            "region": "asia-northeast3"
           }
-        ]
-      },
-      {
-        "source": "/manifest.webmanifest",
-        "headers": [
-          {
-            "key": "Content-Type",
-            "value": "application/manifest+json"
-          }
-        ]
-      },
-      {
-        "source": "/.well-known/assetlinks.json",
-        "headers": [
-          {
-            "key": "Content-Type",
-            "value": "application/json"
-          }
-        ]
-      }
-    ]
-  },
+        }
+      ],
+      "headers": [
+        {
+          "source": "/sw.js",
+          "headers": [
+            {
+              "key": "Cache-Control",
+              "value": "no-cache"
+            }
+          ]
+        },
+        {
+          "source": "/index.html",
+          "headers": [
+            {
+              "key": "Cache-Control",
+              "value": "no-cache"
+            }
+          ]
+        },
+        {
+          "source": "/manifest.webmanifest",
+          "headers": [
+            {
+              "key": "Content-Type",
+              "value": "application/manifest+json"
+            }
+          ]
+        }
+      ]
+    }
+  ],
   "firestore": {
     "rules": "firestore.rules"
+  },
+  "functions": {
+    "source": "functions"
   }
 }
