@@ -174,6 +174,84 @@ code{font-family:var(--mono);font-size:12.5px}
 <main id="view"></main>
 </div>
 <div id="lbx"></div>
+<style>
+/* 소방시설 배치 검토 탭 */
+:root{--alarm:#c2410c;--water:#1d4ed8;--exit:#15803d;--ok:#157347;--warn:#a15c00;--bad:#c62828;--na:#6b7686;--okbg:#e3f4ea;--warnbg:#fdf0d5;--badbg:#fde6e6;--nabg:#eceff3}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--alarm:#ff9a62;--water:#7ba5ff;--exit:#5fd08a;--ok:#5fd08a;--warn:#f0b04a;--bad:#ff7b7b;--na:#8e9aac;--okbg:#15301f;--warnbg:#35280e;--badbg:#3a1a1a;--nabg:#222c39}}
+:root[data-theme="dark"]{--alarm:#ff9a62;--water:#7ba5ff;--exit:#5fd08a;--ok:#5fd08a;--warn:#f0b04a;--bad:#ff7b7b;--na:#8e9aac;--okbg:#15301f;--warnbg:#35280e;--badbg:#3a1a1a;--nabg:#222c39}
+.ly .lyp{background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:14px;min-width:0}
+.ly .lyform{display:grid;grid-template-columns:minmax(200px,1fr) 2fr;gap:12px;align-items:end}
+.ly label{display:flex;flex-direction:column;gap:4px;font-size:12px;color:var(--mute);min-width:0}
+.ly input,.ly select{font:inherit;font-size:14px;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:7px 8px;min-width:0;width:100%}
+.ly .lymeta{display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:8px}
+.ly .lymeta div{background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:6px 9px}
+.ly .lymeta small{display:block;font-size:11.5px;color:var(--mute)}
+.ly .lymeta b{font-size:13.5px;overflow-wrap:anywhere}
+.ly .lyft{margin-top:12px;overflow-x:auto}
+.ly .lyft table{font-size:13px}
+.ly .lyft td,.ly .lyft th{padding:6px 10px}
+.ly .lyft input{width:76px;padding:4px 6px;font-family:var(--mono)}
+.ly .lyadm{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-top:12px;padding-top:12px;border-top:1px dashed var(--line)}
+.ly .seg{display:inline-flex;border:1px solid var(--line);border-radius:6px;overflow:hidden;background:var(--surface)}
+.ly .seg button{border:0;background:transparent;color:var(--mute);padding:7px 14px;font:inherit;font-size:13.5px;font-weight:500;cursor:pointer}
+.ly .seg button[aria-pressed="true"]{background:var(--blue);color:#fff}
+.ly .lymain{display:grid;grid-template-columns:minmax(0,1.05fr) minmax(0,1fr);gap:14px;align-items:start}
+.ly .lyplan{display:grid;grid-template-columns:104px minmax(0,1fr);gap:12px;margin-top:10px}
+.ly .lyfl{display:flex;flex-direction:column;gap:6px}
+.ly .fbtn{border:1px solid var(--line);background:var(--bg);color:var(--ink);border-radius:6px;padding:7px 8px;font:inherit;cursor:pointer;text-align:left;display:flex;flex-direction:column;gap:4px}
+.ly .fbtn[aria-pressed="true"]{border-color:var(--blue);background:var(--blue-soft);box-shadow:inset 3px 0 0 var(--blue)}
+.ly .fbtn b{font-family:var(--mono);font-size:14px}
+.ly .fbtn small{font-family:var(--mono);color:var(--mute);font-size:11px}
+.ly .lybar{height:5px;border-radius:3px;background:var(--line);overflow:hidden}
+.ly .lybar i{display:block;height:100%;background:var(--ok)}
+.ly .fbtn[data-st="warn"] .lybar i{background:var(--warn)}.ly .fbtn[data-st="bad"] .lybar i{background:var(--bad)}
+.ly .lysvg{min-width:0;overflow-x:auto}
+.ly .lysvg svg{display:block;max-width:100%;height:auto;margin-inline:auto}
+.ly .wall{fill:var(--surface);stroke:var(--ink);stroke-width:2.5}
+.ly .core{fill:var(--wire);stroke:var(--mute);stroke-width:1.2}
+.ly .zone{stroke:var(--line);stroke-width:1;stroke-dasharray:4 4}
+.ly .tx{fill:var(--mute);font-family:var(--mono);font-size:10.5px}
+.ly .tx.big{font-size:15px;opacity:.55}
+.ly .door{stroke:var(--blue);stroke-width:4}
+.ly .pin{cursor:pointer}
+.ly .pin .shape{stroke-width:1.8}
+.ly .pin text{font-family:var(--sans);font-weight:700;font-size:10px;text-anchor:middle;dominant-baseline:central;pointer-events:none}
+.ly .pin.alarm{--c:var(--alarm)}.ly .pin.water{--c:var(--water)}.ly .pin.exit{--c:var(--exit)}
+.ly .pin.on .shape{fill:var(--c);stroke:var(--c)}.ly .pin.on text{fill:var(--surface)}
+.ly .pin.off .shape{fill:var(--surface);stroke:var(--c);stroke-dasharray:3 2}.ly .pin.off text{fill:var(--c)}
+.ly .pin.rec .shape{stroke-width:1.2;opacity:.8}
+.ly .pin.hl .shape{stroke:var(--ink);stroke-width:3}
+.ly .lylg{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:11.5px;color:var(--mute);margin-top:10px}
+.ly .lylg span{display:inline-flex;align-items:center;gap:5px}
+.ly .sw{width:12px;height:12px;border-radius:3px;display:inline-block}
+.ly .sw.a{background:var(--alarm)}.ly .sw.w{background:var(--water)}.ly .sw.e{background:var(--exit)}
+.ly .sw.off{background:transparent;border:1.5px dashed var(--mute)}
+.ly .lycards{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin-top:10px}
+.ly .kc{border:1px solid var(--line);border-radius:6px;padding:8px 10px;background:var(--bg)}
+.ly .kc small{display:block;color:var(--mute);font-size:11.5px}
+.ly .kc b{font-family:var(--mono);font-size:20px;font-variant-numeric:tabular-nums}
+.ly .kc.bad b{color:var(--bad)}.ly .kc.ok b{color:var(--ok)}
+.ly .rhead{display:flex;flex-wrap:wrap;justify-content:space-between;gap:8px;align-items:center}
+.ly .lyrows{display:flex;flex-direction:column;margin-top:12px}
+.ly .lyrows .row{padding:10px 0;border-top:1px solid var(--line);display:grid;grid-template-columns:minmax(0,1fr) 54px 54px 76px;gap:4px 8px;align-items:center}
+.ly .nm{font-weight:700;min-width:0;font-size:13.5px}
+.ly .nm small{display:block;font-weight:400;color:var(--mute);font-size:11.5px}
+.ly .num{font-family:var(--mono);text-align:center;font-variant-numeric:tabular-nums}
+.ly .th{font-size:11px;color:var(--mute);text-align:center;border-top:0!important;padding-block:0 6px!important}
+.ly .badge{font-size:11.5px;font-weight:700;border-radius:4px;padding:2px 6px;text-align:center}
+.ly .badge.ok{background:var(--okbg);color:var(--ok)}.ly .badge.warn{background:var(--warnbg);color:var(--warn)}.ly .badge.bad{background:var(--badbg);color:var(--bad)}.ly .badge.na{background:var(--nabg);color:var(--na)}
+.ly .chips{grid-column:1/-1;display:flex;flex-wrap:wrap;gap:4px}
+.ly .chip{font-family:var(--mono);font-size:11px;border-radius:4px;padding:1px 6px;border:1px solid var(--line);background:var(--bg);color:var(--ink);cursor:pointer}
+.ly .chip.on{border-color:var(--ok);color:var(--ok)}
+.ly .chip.off{border-style:dashed;color:var(--bad);border-color:var(--bad)}
+.ly .chip.rec{opacity:.75}
+.ly .chip .f{color:var(--mute);margin-right:3px}
+.ly .na-reason{grid-column:1/-1;font-size:12px;color:var(--mute)}
+.ly pre{margin:0;max-height:520px;overflow:auto;background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:12px;font-family:var(--mono);font-size:12px;line-height:1.55}
+.ly .pin:focus-visible{outline:2px solid var(--blue);outline-offset:2px}
+@media(max-width:980px){.ly .lymain,.ly .lyform{grid-template-columns:minmax(0,1fr)}}
+@media(max-width:560px){.ly .lyplan{grid-template-columns:minmax(0,1fr)}.ly .lyfl{flex-direction:row;flex-wrap:wrap}.ly .fbtn{flex:1 1 84px}.ly .lycards{grid-template-columns:repeat(2,minmax(0,1fr))}.ly .lyrows .row{grid-template-columns:minmax(0,1fr) 44px 44px 70px}}
+</style>
 <script>
 (function(){
 'use strict';
@@ -536,8 +614,8 @@ function render(){
   else{const sm=summarize(),rd=readiness(sm);html=S.step===1?vNotice():S.step===2?vInspect(sm,rd):vReport(sm,rd)}
  }else if(role==='admin'){
   const open=A.reports.filter(r=>r.status==='접수'||r.status==='확인 중').length;
-  steps=[['mon','모니터링'],['job','작업 분배'],['bld','건물'],['usr','사용자'],['rep','제출 리포트'+(open?' ('+open+')':'')],['b3d','3D 열람'],['rule','기준·규칙']].map(a=>'<button data-tab="'+a[0]+'" aria-current="'+(S.tab==a[0]?'step':'false')+'">'+a[1]+'</button>').join('');
-  html=({mon:aMon,job:aJob,bld:aBld,usr:aUsr,rep:aRep,b3d:aB3d,rule:aRule}[S.tab]||aMon)();
+  steps=[['mon','모니터링'],['job','작업 분배'],['bld','건물'],['usr','사용자'],['rep','제출 리포트'+(open?' ('+open+')':'')],['b3d','3D 열람'],['lay','배치 검토'],['rule','기준·규칙']].map(a=>'<button data-tab="'+a[0]+'" aria-current="'+(S.tab==a[0]?'step':'false')+'">'+a[1]+'</button>').join('');
+  html=({mon:aMon,job:aJob,bld:aBld,usr:aUsr,rep:aRep,b3d:aB3d,lay:aLay,rule:aRule}[S.tab]||aMon)();
  }else{
   steps='<button aria-current="step">점검 결과 열람</button>';html=vOwner();
  }
@@ -695,6 +773,158 @@ function aJob(){
  if(ins.some(u=>A.jobs.filter(j=>j.inspUid===u.uid&&j.status!=='승인').length>3))h+='<div class="notice red">한 점검자에게 진행 중 작업이 3건을 넘었습니다.</div>';
  return h;
 }
+/* ================= 소방시설 배치 검토 (관리자 탭) =================
+   건물 등록 정보(층별 면적·용도)로 층마다 필수 설비 수량과 권장 위치를 도면에 그리고, 핀을 눌러 설치 여부를 기록한다.
+   기록(b.ly)은 건물 문서에 함께 저장된다. 수량 계산은 화재안전기준(NFTC) 대표 조항을 단순화한 참고용이다. */
+const LYUSE={'근린생활시설':{auto:600},'업무시설':{auto:1000},'판매시설':{auto:1000,spr:5000},'숙박시설':{auto:600},'교육연구시설':{auto:1000}};
+const LYT={
+ det:{n:'열감지기(차동식 스포트 2종)',g:'alarm',s:'D',sh:'c',rule:'NFTC 203 · 내화구조, 층고 4m 미만 70㎡당 1개 이상',where:'구획 천장 격자 배치'},
+ smk:{n:'연기감지기(계단)',g:'alarm',s:'M',sh:'c',rule:'NFTC 203 · 계단실 수직 15m 미만마다 1개 이상',where:'최하층·최상층 계단실 천장'},
+ pb:{n:'발신기',g:'alarm',s:'P',sh:'c',rule:'NFTC 203 · 층마다, 수평거리 25m 이하',where:'계단 출입구 옆 벽, 높이 0.8~1.5m'},
+ bell:{n:'경종(음향장치)',g:'alarm',s:'B',sh:'c',rule:'NFTC 203 · 층마다, 수평거리 25m 이하',where:'발신기 인근 벽'},
+ strobe:{n:'시각경보기',g:'alarm',s:'V',sh:'c',rule:'NFTC 203 · 대상 용도 여부 확인 필요',where:'복도·공용부 벽 상부'},
+ rcv:{n:'수신기',g:'alarm',s:'R',sh:'c',rule:'NFTC 203 · 상시 사람이 있는 장소 또는 1층 출입구 인근',where:'1층 출입구 인근 벽'},
+ ext:{n:'소화기',g:'water',s:'E',sh:'r',rule:'NFTC 101 · 층마다 3단위 이상, 보행거리 20m 이내 (권고는 구석 보완)',where:'계단 인근, 구획 끝 벽, 바닥에서 1.5m 이하'},
+ hyd:{n:'옥내소화전',g:'water',s:'H',sh:'r',rule:'NFTC 102 · 층마다, 수평거리 25m 이하',where:'계단 인근 벽'},
+ spr:{n:'스프링클러 헤드',g:'water',s:'',sh:'d',rule:'NFTC 103 · 내화구조 수평거리 2.3m 이하',where:'천장 격자 배치'},
+ exit:{n:'피난구유도등',g:'exit',s:'출',sh:'p',rule:'NFTC 303 · 계단·옥외 출입구 상부',where:'계단실 출입문 위, 1층 외부 출입구 위'},
+ path:{n:'복도통로유도등',g:'exit',s:'통',sh:'p',rule:'NFTC 303 · 구부러진 모퉁이와 보행거리 20m마다',where:'복도 바닥 가까운 벽'},
+ desc:{n:'완강기(피난기구)',g:'exit',s:'완',sh:'p',rule:'NFTC 301 · 3층 이상 10층 이하 층마다',where:'창가 고정 지지대 인근'}
+};
+const LYORDER=['det','smk','pb','bell','strobe','rcv','ext','hyd','spr','exit','path','desc'];
+const LYR=(()=>{const d={det:70,ext:200,spr:1000,hyd:3000};try{return Object.assign(d,JSON.parse(localStorage.getItem('fa-ly-r')||'{}'))}catch(_){return d}})();
+const lyDims=a=>{const W=Math.sqrt(a*.75);return{W,D:a/W}};
+const lyGrid=(n,x0,y0,x1,y1)=>{const w=x1-x0,h=y1-y0,c=Math.max(1,Math.ceil(Math.sqrt(n*w/h))),r=Math.ceil(n/c),o=[];for(let k=0;k<n;k++){const cx=k%c,cy=Math.floor(k/c);o.push([x0+w*(cx+.5)/c,y0+h*(cy+.5)/r])}return o};
+function lyFloors(b){const h=((b.ly||{}).h)||{};return(b.floors||[]).map(k=>({key:k,lvl:isUnder(k)?-(+k.slice(1)):parseInt(k,10),b:isUnder(k),area:+((b.areas||{})[k])||0,h:+h[k]||3})).filter(f=>f.area>0)}
+function lyCtx(b){const fl=lyFloors(b),total=fl.reduce((s,f)=>s+f.area,0),thr=LYUSE[b.use]||{auto:1000};
+ return{fl,total,thr,known:!!LYUSE[b.use],auto:total>=thr.auto,
+  spr:f=>((f.b||f.lvl>=4)&&f.area>=LYR.spr)||(thr.spr&&total>=thr.spr),
+  hyd:f=>total>=LYR.hyd||((f.b||f.lvl>=4)&&f.area>=600)}}
+function lyGen(b){
+ const c=lyCtx(b),out=[];if(!c.fl.length)return out;
+ const top=Math.max(...c.fl.map(f=>f.lvl)),bot=c.fl.reduce((m,f)=>f.lvl<m.lvl?f:m).key;
+ c.fl.forEach(f=>{
+  const A=f.area,{W,D}=lyDims(A);
+  const add=(t,x,y,basis)=>{const n=out.filter(o=>o.fk===f.key&&o.t===t).length+1;out.push({id:f.key+'-'+t+'-'+n,fk:f.key,t,n,x,y,W,D,basis:basis||'법정'})};
+  const y0=Math.min(6,D*.3);
+  if(c.auto){
+   lyGrid(Math.ceil(A/LYR.det*(f.h<4?1:2)),1,y0,W-1,D-1).forEach(p=>add('det',p[0],p[1]));
+   if(f.key===bot||f.lvl===top)add('smk',W-2,2.6);
+   const np=Math.max(1,Math.ceil(A/1250));
+   for(let k=0;k<np;k++){const yy=4+k*Math.max(3,(D-8)/np);add('pb',W-5.4,yy);add('bell',W-6.6,yy);add('strobe',W-7.8,yy)}
+   if(f.lvl===1)add('rcv',W/2-3,D-1.4);
+  }
+  const legal=Math.max(1,Math.ceil(Math.ceil(A/LYR.ext)/3)),tot=Math.max(legal,Math.ceil(A/150));
+  const ep=[[W-2.4,7.5],[2,D-4],[2,y0+1],[W-2.4,D-4],[W/2,D/2]];
+  for(let e=0;e<tot;e++)add('ext',ep[e%ep.length][0],ep[e%ep.length][1]+Math.floor(e/ep.length)*1.5,e<legal?'법정':'권고');
+  add('exit',W-4.6,1.4);if(f.lvl===1)add('exit',W/2,D-.9);
+  add('path',W/2,y0+2);add('path',W/2,D-5);
+  if(f.lvl>=3&&f.lvl<=10)for(let l=0;l<Math.ceil(A/800);l++)add('desc',.9,D/2+l*1.5);
+  if(c.spr(f))lyGrid(Math.ceil(A/10.6),1,y0,W-1,D-1).forEach(p=>add('spr',p[0],p[1]));
+  if(c.hyd(f))for(let h=0;h<Math.max(1,Math.ceil(A/1250));h++)add('hyd',W-5.6,7+h*3);
+ });
+ out.forEach(o=>{o.rx=+(o.x/o.W).toFixed(3);o.ry=+(o.y/o.D).toFixed(3)});
+ return out;
+}
+const lyOn=(b,d)=>!!(((b.ly||{}).inst||{})[d.id]);
+const lyTot=(b,ds)=>{let q=0,i=0;ds.forEach(d=>{if(d.basis==='법정'){q++;if(lyOn(b,d))i++}});return{req:q,inst:i}};
+const lyStat=(b,ds,t)=>{const l=ds.filter(d=>d.t===t&&d.basis==='법정'),r=ds.filter(d=>d.t===t&&d.basis==='권고'),i=l.filter(d=>lyOn(b,d)).length;
+ return{req:l.length,inst:i,rec:r.length,recInst:r.filter(d=>lyOn(b,d)).length,st:l.length===0?'na':(i>=l.length?'ok':(i===0?'bad':'warn'))}};
+let lySaveT=null;
+function lySave(b){clearTimeout(lySaveT);lySaveT=setTimeout(()=>{D.update('buildings',b.id,{ly:clone(b.ly)}).catch(e=>{setMsg(emsg(e),false);render()})},500)}
+function lySt(){return S.lay||(S.lay={bld:'',fk:'',scope:'floor',api:false})}
+function lyPin(d,b,cls){const m=LYT[d.t],x=d.sx,y=d.sy,on=lyOn(b,d);let s;
+ if(m.sh==='c')s='<circle class="shape" cx="'+x+'" cy="'+y+'" r="9"/>';
+ else if(m.sh==='r')s='<rect class="shape" x="'+(x-8)+'" y="'+(y-8)+'" width="16" height="16" rx="2"/>';
+ else if(m.sh==='p')s='<rect class="shape" x="'+(x-10)+'" y="'+(y-7)+'" width="20" height="14" rx="7"/>';
+ else s='<circle class="shape" cx="'+x+'" cy="'+y+'" r="4.5"/>';
+ return'<g class="pin '+m.g+' '+(on?'on':'off')+(d.basis==='권고'?' rec':'')+(cls||'')+'" data-lyp="'+esc(d.id)+'" tabindex="0" role="button" aria-label="'+esc(m.n+' '+d.fk+' '+d.n+(on?' 설치':' 미설치'))+'"><title>'+esc(m.n+' #'+d.n+' · '+d.basis+' · '+(on?'설치':'미설치'))+'</title>'+s+(m.s?'<text x="'+x+'" y="'+y+'">'+m.s+'</text>':'')+'</g>'}
+function lyPlan(b,c,ds,f){
+ const mx=c.fl.reduce((m,x)=>x.area>m?x.area:m,0),md=lyDims(mx),S0=Math.min(340/md.W,440/md.D),{W,D}=lyDims(f.area),M=26,w=W*S0+2*M,h=D*S0+2*M,X=m=>M+m*S0;
+ const fd=ds.filter(x=>x.fk===f.key);fd.forEach(o=>{o.sx=+(M+o.x*S0).toFixed(1);o.sy=+(M+o.y*S0).toFixed(1)});
+ let s='<svg viewBox="0 0 '+w.toFixed(0)+' '+h.toFixed(0)+'" width="'+w.toFixed(0)+'" role="img" aria-label="'+esc(f.key)+' 평면도">';
+ s+='<rect class="wall" x="'+M+'" y="'+M+'" width="'+(W*S0)+'" height="'+(D*S0)+'"/>';
+ s+='<line class="zone" x1="'+X(W/2)+'" y1="'+X(0)+'" x2="'+X(W/2)+'" y2="'+X(D)+'"/><line class="zone" x1="'+X(0)+'" y1="'+X(D/2)+'" x2="'+X(W)+'" y2="'+X(D/2)+'"/>';
+ s+='<rect class="core" x="'+X(W-4)+'" y="'+X(0)+'" width="'+(4*S0)+'" height="'+(5*S0)+'"/><text class="tx" x="'+X(W-2)+'" y="'+X(4.4)+'" text-anchor="middle">계단</text>';
+ s+='<line class="door" x1="'+X(W-4)+'" y1="'+X(.9)+'" x2="'+X(W-4)+'" y2="'+X(2.1)+'"/>';
+ if(f.lvl===1)s+='<line class="door" x1="'+X(W/2-1.2)+'" y1="'+X(D)+'" x2="'+X(W/2+1.2)+'" y2="'+X(D)+'"/><text class="tx" x="'+X(W/2)+'" y="'+(X(D)+16)+'" text-anchor="middle">출입구</text>';
+ s+='<text class="tx big" x="'+X(W/4)+'" y="'+X(D/4)+'" text-anchor="middle">구획 A</text><text class="tx big" x="'+X(W*3/4)+'" y="'+X(D*3/4)+'" text-anchor="middle">구획 D</text>';
+ s+='<text class="tx" x="'+X(W/2)+'" y="'+(M-9)+'" text-anchor="middle">'+W.toFixed(1)+' m</text>';
+ s+='<text class="tx" x="'+(M-9)+'" y="'+X(D/2)+'" text-anchor="middle" transform="rotate(-90 '+(M-9)+' '+X(D/2)+')">'+D.toFixed(1)+' m</text>';
+ s+='<line x1="'+X(0)+'" y1="'+(h-8)+'" x2="'+X(5)+'" y2="'+(h-8)+'" stroke="currentColor" stroke-width="2" style="color:var(--mute)"/><text class="tx" x="'+(X(5)+6)+'" y="'+(h-4)+'">5 m</text>';
+ fd.forEach(o=>{s+=lyPin(o,b,S.lay.hl===o.id?' hl':'')});
+ return s+'</svg>';
+}
+function lyRows(b,c,ds,f){
+ const sc=S.lay.scope==='floor'?ds.filter(d=>d.fk===f.key):ds,fls=S.lay.scope==='floor'?[f]:c.fl,at=S.lay.scope==='floor'?f.area+'㎡':'각 층';
+ let h='<div class="row th"><span style="text-align:left">설비 · 기준</span><span>필수</span><span>설치</span><span>상태</span></div>';
+ LYORDER.forEach(k=>{
+  const s=lyStat(b,sc,k),has=sc.some(d=>d.t===k),m=LYT[k];
+  if(!has){let r=null;
+   if(k==='spr'&&!fls.some(c.spr))r='해당 없음: 층 바닥면적('+at+')이 기준 '+LYR.spr+'㎡ 미만 (지하·무창·4층 이상 층 기준).';
+   if(k==='hyd'&&!fls.some(c.hyd))r='해당 없음: 연면적 '+c.total.toLocaleString()+'㎡가 기준 '+LYR.hyd+'㎡ 미만이고 지하·4층 이상 층 바닥면적이 600㎡ 미만.';
+   if(k==='det'&&!c.auto)r='자동화재탐지설비 대상 아님: 연면적 '+c.total.toLocaleString()+'㎡가 '+esc(b.use)+' 기준 '+c.thr.auto+'㎡ 미만. 단독경보형감지기를 권고합니다.';
+   if(!r)return;
+   h+='<div class="row"><div class="nm">'+m.n+'<small>'+m.rule+'</small></div><span class="num">0</span><span class="num">0</span><span class="badge na">해당 없음</span><div class="na-reason">'+r+'</div></div>';return}
+  const lab={ok:'충족',warn:'일부 부족',bad:'미설치',na:'권고만'}[s.st];
+  const chips=sc.filter(d=>d.t===k).map(d=>'<button class="chip '+(lyOn(b,d)?'on':'off')+(d.basis==='권고'?' rec':'')+'" data-lyp="'+esc(d.id)+'" title="'+d.basis+'">'+(S.lay.scope==='all'?'<span class="f">'+esc(d.fk)+'</span>':'')+(m.s||'SP')+d.n+(lyOn(b,d)?' ✓':' ✕')+(d.basis==='권고'?' 권고':'')+'</button>').join('');
+  h+='<div class="row"><div class="nm">'+m.n+'<small>'+m.rule+'</small></div><span class="num">'+s.req+'</span><span class="num">'+s.inst+(s.rec?'<small style="color:var(--mute)"> +'+s.recInst+'</small>':'')+'</span><span class="badge '+s.st+'">'+lab+'</span><div class="na-reason">위치: '+m.where+'</div><div class="chips">'+chips+'</div></div>';
+ });
+ return h;
+}
+function lyApi(b,c,ds){const t=lyTot(b,ds),up=c.fl.filter(f=>!f.b).length;
+ return{lot:b.address||'',building:{id:b.id,name:b.name,usage:b.use,floors_above:up,floors_below:c.fl.length-up,total_area_m2:c.total},
+  summary:{required:t.req,installed:t.inst,missing:t.req-t.inst,rate:t.req?+(t.inst/t.req).toFixed(2):1},
+  rules:{auto_fire_alarm:c.auto,sprinkler_floors:c.fl.filter(c.spr).map(f=>f.key),indoor_hydrant_floors:c.fl.filter(c.hyd).map(f=>f.key)},
+  floors:c.fl.map(f=>({floor:f.key,area_m2:f.area,floor_height_m:f.h,devices:ds.filter(d=>d.fk===f.key).map(d=>({id:d.id,type:d.t,label:LYT[d.t].n,basis:d.basis,installed:lyOn(b,d),x:d.rx,y:d.ry}))}))}}
+function aLay(){
+ const ly=lySt();
+ if(!A.blds.length)return'<div><div class="kick">LAYOUT</div><h2>소방시설 배치 검토</h2><div class="notice blue">등록된 건물이 없습니다. 먼저 "건물"에서 층별 면적과 용도를 넣어 등록하세요.</div></div>';
+ const b=A.blds.find(x=>x.id===ly.bld)||A.blds[0];ly.bld=b.id;
+ const c=lyCtx(b);
+ let h='<div class="ly"><div class="kick">LAYOUT</div><h2>소방시설 배치 검토</h2><p class="lead">등록된 건물의 층별 면적·용도로 층마다 필수 설비 수량과 권장 위치를 도면에 표시합니다. 핀이나 목록 항목을 눌러 설치 여부를 켜고 끄면 건물 정보에 저장됩니다.</p>';
+ h+='<div class="lyp"><div class="lyform"><label>건물<select id="ly-bld">'+A.blds.map(x=>'<option value="'+esc(x.id)+'"'+(x.id===b.id?' selected':'')+'>'+esc(x.name)+' · '+esc(x.use)+'</option>').join('')+'</select></label>'
+  +'<div class="lymeta"><div><small>주소</small><b>'+esc(b.address||'-')+'</b></div><div><small>주용도</small><b>'+esc(b.use)+'</b></div><div><small>층수</small><b>'+(c.fl.filter(f=>!f.b).length)+'층 / 지하 '+c.fl.filter(f=>f.b).length+'층</b></div><div><small>연면적</small><b>'+c.total.toLocaleString()+'㎡</b></div></div></div>';
+ if(!c.fl.length){return h+'<div class="notice red" style="margin-top:12px">이 건물에는 면적이 입력된 층이 없습니다. "건물"에서 수정해 층별 면적을 넣어 주세요.</div></div></div>'}
+ if(!c.known)h+='<div class="notice amber" style="margin-top:12px">"'+esc(b.use)+'"은 기준표에 없어 연면적 1,000㎡ 기준으로 계산합니다. 실제 대상 여부는 전문가 확인이 필요합니다.</div>';
+ h+='<div class="tw lyft"><table><thead><tr><th>층</th><th>층별 면적(㎡)</th><th>층고(m)</th></tr></thead><tbody>'+c.fl.map(f=>'<tr><td><b class="mono">'+esc(f.key)+'</b></td><td class="mono">'+f.area.toLocaleString()+'</td><td><input type="number" step="0.1" min="2.4" max="8" value="'+f.h+'" data-lyh="'+esc(f.key)+'" aria-label="'+esc(f.key)+' 층고"></td></tr>').join('')+'</tbody></table></div>'
+  +'<p class="small" style="margin-top:8px">층고는 건축물대장에 층별 값이 없어 3.0m로 시작합니다. 현장 실측값으로 고치면 감지기 수량에 반영됩니다.</p>'
+  +'<div class="lyadm"><label>감지기 1개당 면적(㎡)<input type="number" data-lyr="det" value="'+LYR.det+'"></label><label>소화기 1단위당 면적(㎡)<input type="number" data-lyr="ext" value="'+LYR.ext+'"></label><label>스프링클러 층 기준면적(㎡)<input type="number" data-lyr="spr" value="'+LYR.spr+'"></label><label>옥내소화전 연면적 기준(㎡)<input type="number" data-lyr="hyd" value="'+LYR.hyd+'"></label></div></div>';
+ if(!c.fl.some(x=>x.key===ly.fk))ly.fk=(c.fl.find(x=>x.key==='1F')||c.fl[0]).key;
+ const f=c.fl.find(x=>x.key===ly.fk),ds=lyGen(b);
+ h+='<div class="seg" style="margin:14px 0"><button data-lyapi="0" aria-pressed="'+!ly.api+'">도면·목록</button><button data-lyapi="1" aria-pressed="'+ly.api+'">API 응답</button></div>';
+ if(ly.api){h+='<div class="lyp"><p class="small" style="margin:0 0 8px">핀 좌표는 도면 가로·세로 대비 0~1 비율입니다. 같은 응답을 건축 도면 위에 겹쳐 그릴 수 있습니다.</p><pre>'+esc(JSON.stringify(lyApi(b,c,ds),null,1))+'</pre></div></div>';return h}
+ const sc=ly.scope==='floor'?ds.filter(d=>d.fk===f.key):ds,t=lyTot(b,sc),miss=t.req-t.inst,pct=t.req?Math.round(t.inst/t.req*100):100;
+ h+='<div class="lymain"><div class="lyp"><div class="rhead"><h3 style="margin:0">'+esc(b.name)+' · '+esc(f.key)+' 평면도 (예시 배치)</h3><span class="small">'+(f.b?'지하층':'지상층')+' · '+f.area+'㎡ · 층고 '+f.h+'m</span></div>'
+  +'<div class="lyplan"><div class="lyfl">'+c.fl.map(x=>{const tt=lyTot(b,ds.filter(d=>d.fk===x.key)),p=tt.req?Math.round(tt.inst/tt.req*100):100,st=p>=100?'ok':(p>=60?'warn':'bad');return'<button class="fbtn" data-lyf="'+esc(x.key)+'" data-st="'+st+'" aria-pressed="'+(x.key===f.key)+'"><b>'+esc(x.key)+'</b><small>'+x.area+'㎡ · '+tt.inst+'/'+tt.req+'</small><span class="lybar"><i style="width:'+p+'%"></i></span></button>'}).join('')+'</div><div class="lysvg">'+lyPlan(b,c,ds,f)+'</div></div>'
+  +'<div class="lylg"><span><i class="sw a"></i>경보·감지</span><span><i class="sw w"></i>소화</span><span><i class="sw e"></i>피난</span><span><i class="sw off"></i>점선 윤곽 = 미설치</span><span>채움 = 설치 확인</span><span>옅은 핀 = 권고(법정 아님)</span></div></div>'
+  +'<div class="lyp"><div class="rhead"><h3 style="margin:0">필수 설비와 설치 현황</h3><div class="seg"><button data-lys="floor" aria-pressed="'+(ly.scope==='floor')+'">선택한 층</button><button data-lys="all" aria-pressed="'+(ly.scope==='all')+'">건물 전체</button></div></div>'
+  +'<div class="lycards"><div class="kc"><small>법정 필수</small><b>'+t.req+'</b></div><div class="kc"><small>설치 확인</small><b>'+t.inst+'</b></div><div class="kc '+(miss?'bad':'ok')+'"><small>부족</small><b>'+miss+'</b></div><div class="kc '+(miss?'':'ok')+'"><small>충족률</small><b>'+pct+'%</b></div></div>'
+  +'<div class="lyrows">'+lyRows(b,c,ds,f)+'</div>'
+  +'<div class="row" style="margin-top:12px"><button class="btn ghost sm" data-lyall="1">이 범위 전부 설치로 표시</button><button class="btn ghost sm" data-lyall="0">이 범위 전부 미설치로 표시</button></div>'
+  +'<p class="small" style="margin-top:10px">수량은 화재안전기준(NFTC)의 대표 조항을 단순화한 참고 계산입니다. 실제 대상 여부와 수량은 용도, 구획, 무창층 여부, 지자체 조례에 따라 달라지므로 소방설계 전문가와 관할 소방서 확인이 필요합니다.</p></div></div></div>';
+ return h;
+}
+function lyClick(e,c){
+ let b;const ly=lySt(),bd=A.blds.find(x=>x.id===ly.bld);
+ if(b=c('[data-lyf]')){ly.fk=b.dataset.lyf;ly.hl='';render();return true}
+ if(b=c('[data-lys]')){ly.scope=b.dataset.lys;render();return true}
+ if(b=c('[data-lyapi]')){ly.api=b.dataset.lyapi==='1';render();return true}
+ if(b=c('[data-lyp]')){if(!bd)return true;const d=lyGen(bd).find(x=>x.id===b.dataset.lyp);if(!d)return true;
+  const L=bd.ly||(bd.ly={inst:{},h:{}});L.inst=L.inst||{};if(L.inst[d.id])delete L.inst[d.id];else L.inst[d.id]=1;ly.hl=d.id;lySave(bd);render();return true}
+ if(b=c('[data-lyall]')){if(!bd)return true;const v=b.dataset.lyall==='1',L=bd.ly||(bd.ly={inst:{},h:{}});L.inst=L.inst||{};
+  lyGen(bd).filter(d=>d.basis==='법정'&&(ly.scope==='all'||d.fk===ly.fk)).forEach(d=>{if(v)L.inst[d.id]=1;else delete L.inst[d.id]});lySave(bd);render();return true}
+ if(b=c('[data-lyopen]')){S.tab='lay';ly.bld=b.dataset.lyopen;ly.fk='';setMsg('');render();return true}
+ return false;
+}
+document.addEventListener('change',e=>{const t=e.target;if(!t||!t.closest)return;
+ if(t.id==='ly-bld'){const l=lySt();l.bld=t.value;l.fk='';render();return}
+ if(t.dataset&&t.dataset.lyh){const bd=A.blds.find(x=>x.id===lySt().bld);if(!bd)return;const v=parseFloat(t.value),L=bd.ly||(bd.ly={inst:{},h:{}});L.h=L.h||{};
+  if(isFinite(v))L.h[t.dataset.lyh]=Math.min(8,Math.max(2.4,v));else delete L.h[t.dataset.lyh];lySave(bd);render();return}
+ if(t.dataset&&t.dataset.lyr){const v=+t.value;if(v>0){LYR[t.dataset.lyr]=v;try{localStorage.setItem('fa-ly-r',JSON.stringify(LYR))}catch(_){}}render()}
+});
+document.addEventListener('keydown',e=>{const t=e.target;if((e.key==='Enter'||e.key===' ')&&t&&t.dataset&&t.dataset.lyp&&t.classList.contains('pin')){e.preventDefault();lyClick(e,s=>t.closest(s))}});
+
 /* 건물 */
 const mkFloors=(g,u)=>{const o=[];for(let i=g;i>=1;i--)o.push(i+'F');for(let i=1;i<=u;i++)o.push('B'+i);return o};
 function newBF(){return{id:'',name:'',address:'',use:'근린생활시설',fire2:true,stairs:2,ground:4,under:1,areas:{'4F':300,'3F':300,'2F':300,'1F':420,'B1':300},ownerUid:'',lat:'',lng:'',radius:100}}
@@ -817,7 +1047,7 @@ function aBld(){
    '<div class="row"><button class="btn ghost sm" type="button" id="bfgeo">현재 위치를 건물 좌표로</button><button class="btn ghost sm" type="button" id="bfgc">주소로 좌표 찾기</button><span class="small">건물 앞에서 눌러 좌표를 채웁니다. 비워 두면 위치 제한이 없습니다.</span></div>'+
    '<div class="row"><button class="btn blue" type="submit">저장</button><button class="btn ghost" type="button" id="bfcancel">취소</button></div></form>';
  }else h+='<div class="row"><button class="btn blue" id="bldnew">+ 건물 등록</button></div>';
- h+=A.blds.length?'<div class="list">'+A.blds.map(b=>{const ow=A.users.find(u=>u.uid===b.ownerUid);return'<div class="card"><div class="row"><div><b>'+esc(b.name)+'</b><div class="small">'+esc(b.address||'-')+' · '+esc(b.use)+' · '+(b.floors||[]).length+'개 층 · 연면적 '+(b.floors||[]).reduce((a,x)=>a+(+b.areas[x]||0),0).toLocaleString()+'㎡ · 건물주 '+esc(ow?ow.name:'미지정')+' · '+(b.lat!=null&&b.lat!==''?'위치 설정됨 ('+(b.radius||100)+' m)':'위치 제한 없음')+'</div></div><span class="sp"></span><button class="btn ghost sm" data-bldedit="'+esc(b.id)+'">수정</button><button class="btn '+(ARM==='b:'+b.id?'bad':'ghost')+' sm" data-blddel="'+esc(b.id)+'">'+(ARM==='b:'+b.id?'삭제 확인':'삭제')+'</button></div></div>'}).join('')+'</div>':'<div class="notice blue">등록된 건물이 없습니다.</div>';
+ h+=A.blds.length?'<div class="list">'+A.blds.map(b=>{const ow=A.users.find(u=>u.uid===b.ownerUid);return'<div class="card"><div class="row"><div><b>'+esc(b.name)+'</b><div class="small">'+esc(b.address||'-')+' · '+esc(b.use)+' · '+(b.floors||[]).length+'개 층 · 연면적 '+(b.floors||[]).reduce((a,x)=>a+(+b.areas[x]||0),0).toLocaleString()+'㎡ · 건물주 '+esc(ow?ow.name:'미지정')+' · '+(b.lat!=null&&b.lat!==''?'위치 설정됨 ('+(b.radius||100)+' m)':'위치 제한 없음')+'</div></div><span class="sp"></span><button class="btn ghost sm" data-lyopen="'+esc(b.id)+'">배치 검토</button><button class="btn ghost sm" data-bldedit="'+esc(b.id)+'">수정</button><button class="btn '+(ARM==='b:'+b.id?'bad':'ghost')+' sm" data-blddel="'+esc(b.id)+'">'+(ARM==='b:'+b.id?'삭제 확인':'삭제')+'</button></div></div>'}).join('')+'</div>':'<div class="notice blue">등록된 건물이 없습니다.</div>';
  return h;
 }
 /* 사용자 */
@@ -903,6 +1133,7 @@ async function submitReport(){
 
 document.addEventListener('click',e=>{
  const t=e.target,c=s=>t.closest(s);let b;
+ if(lyClick(e,c))return;
  if(b=c('[data-ltab]')){S.login.tab=b.dataset.ltab;S.login.msg='';return render()}
  if(t.id==='reload')return location.reload();
  if(t.id==='logout')return doLogout();
@@ -986,6 +1217,7 @@ document.addEventListener('submit',async e=>{
   if((lat==null)!==(lng==null)||(lat!=null&&(isNaN(lat)||isNaN(lng)||Math.abs(lat)>90||Math.abs(lng)>180))){setMsg('위도·경도를 둘 다 올바르게 입력하거나 둘 다 비워 두세요.');return render()}
   const areas={};floors.forEach(x=>areas[x]=Math.max(0,+b.areas[x]||0));
   const o={id:b.id||'B-'+Date.now().toString(36)+rnd(),name:b.name.trim(),address:(b.address||'').trim(),use:b.use,fire2:!!b.fire2,stairs:Math.max(1,Math.min(6,+b.stairs||2)),floors,areas,ownerUid:b.ownerUid||'',lat,lng,radius:Math.max(20,+b.radius||100),ts:Date.now()};
+  const old=A.blds.find(x=>x.id===o.id);if(old&&old.ly)o.ly=old.ly;
   return guard(async()=>{await D.set('buildings',o.id,o);S.bf=null;setMsg('건물을 저장했습니다.',true)});
  }
  if(fid==='fJob'){
