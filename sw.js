@@ -6,7 +6,7 @@ self.addEventListener('fetch',e=>{
   const req=e.request,u=new URL(req.url);
   if(req.method!=='GET')return;
   // 서버 연결(Firebase) 요청과 예약 경로는 캐시하지 않고 그대로 통과
-  if(u.pathname.startsWith('/__/')||(u.origin!==location.origin&&!/fonts\.(googleapis|gstatic)\.com$/.test(u.hostname)))return;
+  if(u.pathname.startsWith('/__/')||u.pathname.startsWith('/api/')||(u.origin!==location.origin&&!/fonts\.(googleapis|gstatic)\.com$/.test(u.hostname)))return;
   // 앱 본체는 네트워크 우선(배포 즉시 반영), 오프라인이면 캐시
   if(req.mode==='navigate'||u.pathname.endsWith('/index.html')||u.pathname.endsWith('/sw.js')){
     e.respondWith(fetch(req).then(r=>{if(r&&r.ok){const c=r.clone();caches.open(V).then(x=>x.put(req,c))}return r}).catch(()=>caches.match(req).then(h=>h||caches.match('index.html'))));

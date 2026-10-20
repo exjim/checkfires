@@ -8,7 +8,9 @@
       "**/node_modules/**",
       ".firebaserc",
       ".github/**",
-      "firestore.rules"
+      "firestore.rules",
+      "functions/**",
+      "m/node_modules/**"
     ],
     "cleanUrls": true,
     "headers": [
@@ -48,9 +50,28 @@
           }
         ]
       }
+    ],
+    "rewrites": [
+      {
+        "source": "/api/addr",
+        "function": {
+          "functionId": "addr",
+          "region": "asia-northeast3"
+        }
+      },
+      {
+        "source": "/api/ledger",
+        "function": {
+          "functionId": "ledger",
+          "region": "asia-northeast3"
+        }
+      }
     ]
   },
   "firestore": {
     "rules": "firestore.rules"
+  },
+  "functions": {
+    "source": "functions"
   }
 }
