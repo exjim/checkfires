@@ -1,7 +1,8 @@
 <!doctype html>
 <html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <link rel="manifest" href="manifest.webmanifest">
-<link rel="icon" href="../icons/icon-192.png">
+<link rel="icon" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
 <title>소방점검 앱</title>
 
 <meta name="theme-color" content="#23262b">
@@ -598,4 +599,5 @@ render();fbInit();
 })();
 </script>
 
+<script>if("serviceWorker" in navigator&&/\.(web\.app|firebaseapp\.com)$/.test(location.hostname))addEventListener("load",function(){navigator.serviceWorker.register("/sw.js").catch(function(){})})</script>
 </body></html>
