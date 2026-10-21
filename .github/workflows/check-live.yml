@@ -7,7 +7,7 @@ jobs:
       - name: Probe
         run: |
           for p in "" "index.html" "sw.js" "manifest.webmanifest" "admin/" "admin/sw.js"; do
-            R=$(curl -s -L -H 'Cache-Control: no-cache' "https://checkfires.web.app/$p?cb=$RANDOM")
+            R=$(curl -s -H 'Cache-Control: no-cache' "https://checkfires.web.app/$p?cb=$RANDOM")
             T=$(echo "$R" | grep -o '<title>[^<]*' | head -1)
             H=$(echo "$R" | head -c 150 | tr '\n' ' ')
             echo "::notice title=LIVE /$p::${T} | ${H}"

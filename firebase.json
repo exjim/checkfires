@@ -1,5 +1,6 @@
 {
   "hosting": {
+    "site": "checkfires",
     "public": ".",
     "ignore": [
       "firebase.json",
