@@ -182,7 +182,7 @@ var JP={'미배정':'p-n','예정':'p-b','진행 중':'p-a','기한 초과':'p-r
 function toast(t){UI.toast=t;render();setTimeout(function(){if(UI.toast===t){UI.toast='';render()}},2200)}
 
 /* ---------- Firestore 동기화 (컬렉션: mbuildings · mjobs · mreports · mphotos · mmeta) ---------- */
-var DB=null,SY={mbuildings:{},mjobs:{},mreports:{},mforms:{}},PHSY={},PEND={},UNSUBS=[],SETSY='';
+var DB=null,SY={mbuildings:{},mjobs:{},mreports:{},mforms:{}},PHSY={},PEND={},UNSUBS=[],SETSY='',SETLOADED=false;
 var COLL={buildings:'mbuildings',jobs:'mjobs',reports:'mreports',forms:'mforms'};
 function cj(v){if(Array.isArray(v))return'['+v.map(cj).join(',')+']';if(v&&typeof v==='object')return'{'+Object.keys(v).sort().map(function(k){return JSON.stringify(k)+':'+cj(v[k])}).join(',')+'}';return JSON.stringify(v)}
 function pcount(r){return r.photos&&r.photos.length?r.photos.length:(r.np||0)}
@@ -192,7 +192,7 @@ function syncPhotos(j){if(j._ph!==true)return;j.scope.forEach(function(k){var x=
  DB.collection('mphotos').doc(key).set({jobId:j.id,who:j.who||'',fac:k,list:x.photos||[]}).catch(function(e){PHSY[key]=undefined;toast('사진을 저장하지 못했습니다 ('+(e&&e.code||'오류')+')')})})}
 function syncOut(){if(!FBON||!DB||FBS.st!=='in')return;
  ['buildings','jobs','reports','forms'].forEach(function(kind){var cn=COLL[kind];ST[kind].forEach(function(o){var d=toDoc(kind,o),js=cj(d);if(SY[cn][o.id]===js)return;SY[cn][o.id]=js;if(kind==='jobs')syncPhotos(o);DB.collection(cn).doc(o.id).set(d).catch(wfail(cn,o.id))})});
- if(isOp()){var ms=cj({rules:ST.rules,org_info:ST.org_info,jusoKey:ST.jusoKey||''});if(ms!==SETSY){SETSY=ms;DB.collection('mmeta').doc('settings').set({rules:ST.rules,org_info:ST.org_info,jusoKey:ST.jusoKey||''}).catch(function(){SETSY=''})}}}
+ if(isOp()&&SETLOADED){var ms=cj({rules:ST.rules,org_info:ST.org_info,jusoKey:ST.jusoKey||''});if(ms!==SETSY){SETSY=ms;DB.collection('mmeta').doc('settings').set({rules:ST.rules,org_info:ST.org_info,jusoKey:ST.jusoKey||''}).catch(function(){SETSY=''})}}}
 function ensurePhotos(j){if(!FBON||!DB||!j||j._ph===true||j._ph==='loading')return;j._ph='loading';var id=j.id;
  Promise.all(j.scope.map(function(k){var key=id+'__'+k;return DB.collection('mphotos').doc(key).get().then(function(d){var l=d.exists?(d.data().list||[]):[];PHSY[key]=cj(l);return[k,l]})})).then(function(rs){var c=job(id);if(!c)return;rs.forEach(function(x){if(c.res[x[0]]){c.res[x[0]].photos=x[1];c.res[x[0]].np=x[1].length}});c._ph=true;render()}).catch(function(e){var c=job(id);if(c)c._ph=undefined;toast('사진을 불러오지 못했습니다 ('+(e&&e.code||'오류')+')')})}
 function qlist(){return FBON?ST.reports.filter(function(r){return PEND[r.id]}).map(function(r){return r.id}):ST.queue}
@@ -212,10 +212,10 @@ function attach(){UI.syncErr='';var uid=ST.uid,op=isOp();detach();
  listen(op?DB.collection('mjobs'):DB.collection('mjobs').where('who','==',uid),'jobs');
  listen(op?DB.collection('mreports'):DB.collection('mreports').where('by','==',uid),'reports');
  listen(op?DB.collection('mforms'):DB.collection('mforms').where('by','==',uid),'forms');
- UNSUBS.push(DB.collection('mmeta').doc('settings').onSnapshot(function(d){if(!d.exists)return;var x=d.data();if(x.rules)ST.rules=Object.assign({},ST.rules,x.rules);if(x.org_info)ST.org_info=Object.assign({},ST.org_info,x.org_info);ST.jusoKey=x.jusoKey||'';SETSY=cj({rules:ST.rules,org_info:ST.org_info,jusoKey:ST.jusoKey||''});render()},function(){}));
+ UNSUBS.push(DB.collection('mmeta').doc('settings').onSnapshot(function(d){SETLOADED=true;if(!d.exists)return;var x=d.data();if(x.rules)ST.rules=Object.assign({},ST.rules,x.rules);if(x.org_info)ST.org_info=Object.assign({},ST.org_info,x.org_info);ST.jusoKey=x.jusoKey||'';SETSY=cj({rules:ST.rules,org_info:ST.org_info,jusoKey:ST.jusoKey||''});render()},function(){}));
  if(op)UNSUBS.push(DB.collection('users').onSnapshot(function(snap){ST.staff=[];snap.forEach(function(d){var u=d.data();if(!u.active||(u.role!=='admin'&&u.role!=='inspector'))return;NAMES[u.uid]=u.name;ST.staff.push({id:u.uid,name:u.name,role:u.role==='admin'?'operator':'inspector',tel:u.phone||''})});render()},function(){}))}
 function detach(){UNSUBS.forEach(function(f){try{f()}catch(e){}});UNSUBS=[]}
-function clearData(){detach();UI.syncErr='';ST.buildings=[];ST.jobs=[];ST.reports=[];ST.forms=[];ST.queue=[];ST.staff=[];SY={mbuildings:{},mjobs:{},mreports:{},mforms:{}};PHSY={};PEND={};SETSY=''}
+function clearData(){detach();UI.syncErr='';ST.buildings=[];ST.jobs=[];ST.reports=[];ST.forms=[];ST.queue=[];ST.staff=[];SY={mbuildings:{},mjobs:{},mreports:{},mforms:{}};PHSY={};PEND={};SETSY='';SETLOADED=false}
 
 /* ---------- 로그인 (체크파이어와 같은 Firebase 계정: 아이디@checkfires.app) ---------- */
 var FBON=/\.(web\.app|firebaseapp\.com)$/.test(location.hostname);
