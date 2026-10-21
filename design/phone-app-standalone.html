@@ -47,6 +47,7 @@ h2{font-size:20px;font-weight:900;margin:0}h3{font-size:14px;margin:6px 0 0;font
 .btn.bad{background:var(--bad);border-color:var(--bad);color:#fff}
 input,select,textarea{font:inherit;font-size:16px;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:10px 12px;min-height:44px;width:100%;min-width:0}
 textarea{resize:vertical;min-height:72px}
+.rrow{display:flex;gap:8px;align-items:center}.rrow .chk{flex:1}.rrow .btn.sm{flex:none;white-space:nowrap}.paper{background:#fff;color:#111;border:1px solid #333;border-radius:4px;padding:16px 14px;display:flex;flex-direction:column;gap:8px}.paper h2{margin:0;font-size:17px;text-align:center}.paper .pk{text-align:center;font-size:13px}.paper .ph{font-weight:700;border-top:1px solid #333;padding-top:8px;margin-top:4px}.paper .prow{display:flex;gap:8px;align-items:center;font-size:14px}.paper .prow span{flex:none;width:76px}.paper input,.paper textarea{background:#fff;color:#111;border:0;border-bottom:1px solid #999;border-radius:0;min-height:34px;padding:4px 2px;font-size:15px}.paper .pchk{border:0;background:transparent;color:#111;text-align:left;font-size:15px;padding:6px 2px;cursor:pointer;width:100%}.paper .sig{font-size:13px;margin-top:10px}@media print{body *{visibility:hidden}.paper,.paper *{visibility:visible}.paper{position:absolute;left:0;top:0;width:100%;border:0}}
 label.f{display:grid;gap:4px;font-size:12.5px;color:var(--mute)}
 input:focus-visible,select:focus-visible,textarea:focus-visible,button:focus-visible,.pin:focus-visible{outline:2px solid var(--blue);outline-offset:2px}
 .seg{display:flex;border:1px solid var(--line);border-radius:10px;overflow:hidden;background:var(--surface)}
@@ -151,11 +152,11 @@ function seed(){
  jobs[0].res.ext.done=true;jobs[0].res.ext.items.forEach(function(it){it.r='정상';it.c=true});
  function rep(id,job,ack,sent){return{id:id,job:job.id,bld:job.bld,date:job.sub,by:job.who,res:clone(job.res),sent:sent,sentTo:sent?'관리사무소':'',expire:sent?addD(7):'',ack:ack,token:rnd()+rnd(),sig:'',synced:true,at:job.sub}}
  var reps=[rep('R-090',jobs[5],null,true),rep('R-091',jobs[6],{memo:'확인했습니다',req:false,at:'09/06 10:12'},true)];
- return{v:1,consent:false,role:'',uid:'',org:'',offline:false,queue:[],buildings:b,jobs:jobs,reports:reps,staff:clone(STAFF0),
+ return{v:1,consent:false,role:'',uid:'',org:'',offline:false,forms:[],queue:[],buildings:b,jobs:jobs,reports:reps,staff:clone(STAFF0),
   notif:{due:true,assign:true,ack:false},org_info:{name:'세이프파트너스',biz:'123-45-67890',tel:'031-000-0000',plan:'건물 50곳'},rules:{det:70,ext:200,spr:1000,hyd:3000},tab:'home'}
 }
 var ST;try{ST=JSON.parse(localStorage.getItem(KEY)||'null')}catch(e){ST=null}
-if(!ST||ST.v!==1)ST=seed();
+if(!ST||ST.v!==1)ST=seed();if(!ST.forms)ST.forms=[];
 if(location.hostname.match(/\.(web\.app|firebaseapp\.com)$/)){var s0=seed(),sv=ST;s0.buildings=[];s0.jobs=[];s0.reports=[];s0.queue=[];s0.staff=[];s0.role='';s0.uid='';s0.consentDone=!!sv.consentDone;if(sv.notif)s0.notif=sv.notif;ST=s0}
 var saveFail=false;
 function save(){try{localStorage.setItem(KEY,JSON.stringify(FBON_?{v:1,consentDone:ST.consentDone,notif:ST.notif}:ST));saveFail=false}catch(e){saveFail=true}if(typeof syncOut==='function')syncOut()}
@@ -174,8 +175,8 @@ var JP={'미배정':'p-n','예정':'p-b','진행 중':'p-a','기한 초과':'p-r
 function toast(t){UI.toast=t;render();setTimeout(function(){if(UI.toast===t){UI.toast='';render()}},2200)}
 
 /* ---------- Firestore 동기화 (컬렉션: mbuildings · mjobs · mreports · mphotos · mmeta) ---------- */
-var DB=null,SY={mbuildings:{},mjobs:{},mreports:{}},PHSY={},PEND={},UNSUBS=[],SETSY='';
-var COLL={buildings:'mbuildings',jobs:'mjobs',reports:'mreports'};
+var DB=null,SY={mbuildings:{},mjobs:{},mreports:{},mforms:{}},PHSY={},PEND={},UNSUBS=[],SETSY='';
+var COLL={buildings:'mbuildings',jobs:'mjobs',reports:'mreports',forms:'mforms'};
 function cj(v){if(Array.isArray(v))return'['+v.map(cj).join(',')+']';if(v&&typeof v==='object')return'{'+Object.keys(v).sort().map(function(k){return JSON.stringify(k)+':'+cj(v[k])}).join(',')+'}';return JSON.stringify(v)}
 function pcount(r){return r.photos&&r.photos.length?r.photos.length:(r.np||0)}
 function toDoc(kind,o){var d=JSON.parse(JSON.stringify(o));delete d._ph;delete d.synced;if(kind!=='buildings'&&d.res){Object.keys(d.res).forEach(function(k){var x=d.res[k];x.np=pcount(o.res[k]);x.photos=[]})}return d}
@@ -183,7 +184,7 @@ function wfail(c,id){return function(e){SY[c][id]=undefined;toast('저장하지 
 function syncPhotos(j){if(j._ph!==true)return;j.scope.forEach(function(k){var x=j.res[k];if(!x)return;var key=j.id+'__'+k,js=cj(x.photos||[]);if(PHSY[key]===js)return;var first=PHSY[key]===undefined;PHSY[key]=js;if(first&&!x.photos.length)return;
  DB.collection('mphotos').doc(key).set({jobId:j.id,who:j.who||'',fac:k,list:x.photos||[]}).catch(function(e){PHSY[key]=undefined;toast('사진을 저장하지 못했습니다 ('+(e&&e.code||'오류')+')')})})}
 function syncOut(){if(!FBON||!DB||FBS.st!=='in')return;
- ['buildings','jobs','reports'].forEach(function(kind){var cn=COLL[kind];ST[kind].forEach(function(o){var d=toDoc(kind,o),js=cj(d);if(SY[cn][o.id]===js)return;SY[cn][o.id]=js;if(kind==='jobs')syncPhotos(o);DB.collection(cn).doc(o.id).set(d).catch(wfail(cn,o.id))})});
+ ['buildings','jobs','reports','forms'].forEach(function(kind){var cn=COLL[kind];ST[kind].forEach(function(o){var d=toDoc(kind,o),js=cj(d);if(SY[cn][o.id]===js)return;SY[cn][o.id]=js;if(kind==='jobs')syncPhotos(o);DB.collection(cn).doc(o.id).set(d).catch(wfail(cn,o.id))})});
  if(isOp()){var ms=cj({rules:ST.rules,org_info:ST.org_info,jusoKey:ST.jusoKey||''});if(ms!==SETSY){SETSY=ms;DB.collection('mmeta').doc('settings').set({rules:ST.rules,org_info:ST.org_info,jusoKey:ST.jusoKey||''}).catch(function(){SETSY=''})}}}
 function ensurePhotos(j){if(!FBON||!DB||!j||j._ph===true||j._ph==='loading')return;j._ph='loading';var id=j.id;
  Promise.all(j.scope.map(function(k){var key=id+'__'+k;return DB.collection('mphotos').doc(key).get().then(function(d){var l=d.exists?(d.data().list||[]):[];PHSY[key]=cj(l);return[k,l]})})).then(function(rs){var c=job(id);if(!c)return;rs.forEach(function(x){if(c.res[x[0]]){c.res[x[0]].photos=x[1];c.res[x[0]].np=x[1].length}});c._ph=true;render()}).catch(function(e){var c=job(id);if(c)c._ph=undefined;toast('사진을 불러오지 못했습니다 ('+(e&&e.code||'오류')+')')})}
@@ -203,10 +204,11 @@ function attach(){UI.syncErr='';var uid=ST.uid,op=isOp();detach();
  listen(DB.collection('mbuildings'),'buildings');
  listen(op?DB.collection('mjobs'):DB.collection('mjobs').where('who','==',uid),'jobs');
  listen(op?DB.collection('mreports'):DB.collection('mreports').where('by','==',uid),'reports');
+ listen(op?DB.collection('mforms'):DB.collection('mforms').where('by','==',uid),'forms');
  UNSUBS.push(DB.collection('mmeta').doc('settings').onSnapshot(function(d){if(!d.exists)return;var x=d.data();if(x.rules)ST.rules=Object.assign({},ST.rules,x.rules);if(x.org_info)ST.org_info=Object.assign({},ST.org_info,x.org_info);ST.jusoKey=x.jusoKey||'';SETSY=cj({rules:ST.rules,org_info:ST.org_info,jusoKey:ST.jusoKey||''});render()},function(){}));
  if(op)UNSUBS.push(DB.collection('users').onSnapshot(function(snap){ST.staff=[];snap.forEach(function(d){var u=d.data();if(!u.active||(u.role!=='admin'&&u.role!=='inspector'))return;NAMES[u.uid]=u.name;ST.staff.push({id:u.uid,name:u.name,role:u.role==='admin'?'operator':'inspector',tel:u.phone||''})});render()},function(){}))}
 function detach(){UNSUBS.forEach(function(f){try{f()}catch(e){}});UNSUBS=[]}
-function clearData(){detach();UI.syncErr='';ST.buildings=[];ST.jobs=[];ST.reports=[];ST.queue=[];ST.staff=[];SY={mbuildings:{},mjobs:{},mreports:{}};PHSY={};PEND={};SETSY=''}
+function clearData(){detach();UI.syncErr='';ST.buildings=[];ST.jobs=[];ST.reports=[];ST.forms=[];ST.queue=[];ST.staff=[];SY={mbuildings:{},mjobs:{},mreports:{},mforms:{}};PHSY={};PEND={};SETSY=''}
 
 /* ---------- 로그인 (체크파이어와 같은 Firebase 계정: 아이디@checkfires.app) ---------- */
 var FBON=/\.(web\.app|firebaseapp\.com)$/.test(location.hostname);
@@ -432,10 +434,41 @@ function lyApi(b,c,ds){var t=lyTot(b,ds),up=c.fl.filter(function(f){return !f.b}
 var RS={미발송:'p-a',발송됨:'p-b',확인됨:'p-g'};
 function repState(r){return r.ack?'확인됨':(r.sent?'발송됨':'미발송')}
 function defects(r){var o=[];FKEYS.forEach(function(k){if(r.res[k])r.res[k].items.forEach(function(i){if(i.r&&i.r!=='정상')o.push({fac:k,t:i.t,r:i.r,photos:pcount(r.res[k]),note:r.res[k].note})})});return o}
-V.R1=function(){var m=me(),all=isOp()?ST.reports:ST.reports.filter(function(r){return r.by===m.id}),f=UI.rpt,list=all.filter(function(r){return f==='전체'||(f==='미발송'&&!r.sent)||(f==='확인 대기'&&r.sent&&!r.ack)}).sort(function(a,b){return a.at<b.at?1:-1});
- return{title:'보고서',html:seg('rpt',['전체','미발송','확인 대기'],f)+(list.length?list.map(function(r){var s=repState(r);return'<button class="card tap" data-go="R2" data-id="'+r.id+'"><div class="row"><b>'+esc(bld(r.bld).name)+'</b><span class="sp"></span>'+pill(s,RS[s])+'</div><div class="small mute">'+esc(r.date)+' · '+esc(who(r.by))+((FBON?!PEND[r.id]:r.synced)?'':' · 전송 대기')+'</div></button>'}).join(''):'<div class="notice">보고서가 없습니다. 점검을 제출하면 자동으로 만들어집니다.</div>')}};
-function reportBody(r,owner){var ds=defects(r),tot=0;FKEYS.forEach(function(k){if(r.res[k])tot+=r.res[k].items.length});
- return kpi([['점검 항목',tot],['조치 필요',ds.length]])+(ds.length?'<h3>조치가 필요한 항목</h3>'+ds.map(function(d){return'<div class="card"><div class="row"><b>'+FAC[d.fac].n+'</b><span class="sp"></span>'+pill(d.r,'p-r')+'</div><div class="small">'+esc(d.t)+(d.note?' · '+esc(d.note):'')+'</div><div class="small mute">사진 '+d.photos+'장</div></div>'}).join(''):'<div class="notice g">조치가 필요한 항목이 없습니다.</div>')+'<div class="card"><div class="row"><span class="mute">점검자 서명</span><span class="sp"></span><b>'+esc(who(r.by))+'</b></div>'+(r.sig?'<img src="'+r.sig+'" alt="서명" style="max-width:100%;height:60px;object-fit:contain;filter:var(--sigf,none)">':'')+'</div>'}
+var RT=[
+ {k:'result',g:'A',n:'소방시설등 자체점검 실시결과 보고서',pts:['소화기: 안전핀·봉인·압력계','자동화재탐지설비: 수신기 표시·경보','감지기·발신기 외형과 작동','옥내소화전: 호스·관창·밸브','스프링클러 헤드·밸브 상태','비상조명등·유도등 점등','방화문·방화셔터 작동','불량 항목 조치 필요 여부 기재'],x:[]},
+ {k:'sheet',g:'A',n:'소방시설등 점검표',pts:['설비별 점검 항목 결과 기재','수량 확인','불량·보수 항목 표시','사진 첨부 확인','점검자 서명'],x:[]},
+ {k:'perf',g:'A',n:'소방시설 성능시험조사표',pts:['펌프 성능시험','방수압력·방수량 측정','감지기 작동시험','제연설비 풍량 측정','시험 결과 기재'],x:[]},
+ {k:'plan',g:'A',n:'자체점검 이행계획서',pts:['불량 항목 목록 작성','수리·교체 계획 기재','이행 예정일 기재','관계인 확인'],x:[['due','이행 예정일']]},
+ {k:'done',g:'A',n:'자체점검 이행완료보고서',pts:['조치 완료 항목 확인','완료 사진 첨부','완료일 기재','관계인 확인'],x:[['doneDate','이행 완료일']]},
+ {k:'board',g:'A',n:'자체점검 점검기록표 (게시용)',pts:['점검 일시·점검자 기재','결과 요약 기재','출입자가 보는 곳에 게시','게시 기간 유지'],x:[['postDate','게시 시작일']]},
+ {k:'fplan',g:'B',n:'소방계획서',pts:['건물 현황','자위소방대 편성','화재 예방 활동','피난 계획','소방시설 현황','교육·훈련 계획'],x:[['wdate','작성일']]},
+ {k:'drill',g:'B',n:'소방훈련·교육 실시결과 기록부',pts:['훈련·교육 일시·장소','참석자 명단','훈련·교육 내용','실시자 서명'],x:[['drillDate','훈련·교육 일시'],['people','참석 인원']]},
+ {k:'log',g:'B',n:'소방안전관리 업무 수행 기록',pts:['소방시설 점검·관리','화기 취급 감독','피난·방화시설 관리','교육·훈련 실시'],x:[['ldate','기록일']]}];
+var FCOM=[['bname','대상물명'],['addr','주소'],['kind','점검구분'],['date','점검일'],['who','점검자']];
+function rtype(k){return RT.find(function(t){return t.k===k})}
+function rjob(){var js=ST.jobs;if(!js.length)return null;var x=UI.rj&&js.find(function(y){return y.id===UI.rj});if(x)return x;var past=js.filter(function(y){return y.date<=TODAY});return past.length?past[past.length-1]:js[0]}
+function fget(jid,k){return ST.forms.find(function(f){return f.id===jid+'__'+k})}
+function fmk(jid,k){var f=fget(jid,k);if(!f){var j=job(jid);f={id:jid+'__'+k,job:jid,bld:j?j.bld:'',k:k,by:ST.uid,on:false,checks:{},vals:{},at:''};ST.forms.push(f)}return f}
+function fsave(f){f.at=new Date().toISOString();save()}
+function fcnt(jid,k){var f=fget(jid,k),t=rtype(k),n=0;if(f)t.pts.forEach(function(_,i){if(f.checks[i])n++});return n}
+function fdef(j,key){var b=bld(j.bld)||{};return({bname:b.name,addr:b.lot,kind:j.type,date:j.date,who:who(j.who||ST.uid)})[key]||''}
+function fv(j,k,key){var f=fget(j.id,k);return f&&f.vals&&f.vals[key]!==undefined?f.vals[key]:fdef(j,key)}
+function fdata(j,t){return'data-j="'+j.id+'" data-k="'+t.k+'"'}
+V.R1=function(){var m=me(),j=rjob(),all=isOp()?ST.reports:ST.reports.filter(function(r){return r.by===m.id}),f=UI.rpt,list=all.filter(function(r){return f==='전체'||(f==='미발송'&&!r.sent)||(f==='확인 대기'&&r.sent&&!r.ack)}).sort(function(a,b){return a.at<b.at?1:-1});
+ var h='';
+ if(j){var opts=ST.jobs.slice().sort(function(a,b){return a.date<b.date?1:-1}).map(function(x){return'<option value="'+x.id+'"'+(x.id===j.id?' selected':'')+'>'+esc(bld(x.bld).name)+' · '+esc(x.type)+' · '+esc(x.date)+'</option>'}).join('');
+  var row=function(t,n){var fr=fget(j.id,t.k)||{},on=!!fr.on;return'<div class="rrow"><button class="chk" role="checkbox" data-act="rton" '+fdata(j,t)+' aria-checked="'+on+'"><i>'+(on?'✓':'')+'</i><span>'+n+'. '+esc(t.n)+'</span></button>'+(on?'<button class="btn sm ghost" data-go="R4" data-job="'+j.id+'" data-k="'+t.k+'">'+fcnt(j.id,t.k)+'/'+t.pts.length+' 열기</button>':'')+'</div>'};
+  h+='<label class="f">건물·작업<select data-act="rj">'+opts+'</select></label><div class="small mute">보고서 앞 네모를 체크하면 그 보고서의 체크포인트를 작성합니다. 체크포인트는 초안이며 소방청 서식과 대조해 확정합니다.</div><h3>A. 소방시설 자체점검 (소방시설법)</h3><div class="stack">'+RT.filter(function(t){return t.g==='A'}).map(function(t,i){return row(t,i+1)}).join('')+'</div><h3>B. 소방안전관리 (화재예방법)</h3><div class="stack">'+RT.filter(function(t){return t.g==='B'}).map(function(t,i){return row(t,i+7)}).join('')+'</div>'}
+ else h+='<div class="notice">점검 작업이 있어야 보고서를 작성할 수 있습니다.</div>';
+ h+='<h3>제출된 보고서</h3>'+seg('rpt',['전체','미발송','확인 대기'],f)+(list.length?list.map(function(r){var s=repState(r);return'<button class="card tap" data-go="R2" data-id="'+r.id+'"><div class="row"><b>'+esc(bld(r.bld).name)+'</b><span class="sp"></span>'+pill(s,RS[s])+'</div><div class="small mute">'+esc(r.date)+' · '+esc(who(r.by))+((FBON?!PEND[r.id]:r.synced)?'':' · 전송 대기')+'</div></button>'}).join(''):'<div class="notice">제출된 보고서가 없습니다. 점검을 제출하면 자동으로 만들어집니다.</div>');
+ return{title:'보고서',html:h}};
+function fieldInputs(j,t,paper){var rows=FCOM.concat(t.x);return rows.map(function(x){var v=fv(j,t.k,x[0]);return paper?'<div class="prow"><span>'+x[1]+'</span><input data-act="rval" '+fdata(j,t)+' data-key="'+x[0]+'" value="'+esc(v)+'"></div>':'<label class="f">'+x[1]+'<input data-act="rval" '+fdata(j,t)+' data-key="'+x[0]+'" value="'+esc(v)+'"></label>'}).join('')}
+V.R4=function(p){var j=job(p.job),t=rtype(p.k);if(!j||!t)return{title:'보고서',back:1,html:'<div class="notice">작업을 찾을 수 없습니다.</div><button class="btn ghost" data-act="rmain">보고서 메인으로</button>'};
+ var f=fget(j.id,t.k)||{checks:{},vals:{}};
+ return{title:t.n,back:1,html:'<div class="card"><b>'+esc(bld(j.bld).name)+'</b><div class="small mute">'+esc(j.type)+' · '+esc(j.date)+'</div></div><h3>체크포인트 '+fcnt(j.id,t.k)+' / '+t.pts.length+'</h3><div class="stack">'+t.pts.map(function(x,i){return'<button class="chk" role="checkbox" data-act="rtick" '+fdata(j,t)+' data-i="'+i+'" aria-checked="'+!!f.checks[i]+'"><i>'+(f.checks[i]?'✓':'')+'</i>'+esc(x)+'</button>'}).join('')+'</div><h3>보고서 내용</h3>'+fieldInputs(j,t,false)+'<label class="f">점검 의견·비고<textarea data-act="rval" '+fdata(j,t)+' data-key="note">'+esc(fv(j,t.k,'note'))+'</textarea></label><button class="btn blue" data-go="R5" data-job="'+j.id+'" data-k="'+t.k+'">종이 보고서 보기</button><button class="btn ghost" data-act="rmain">보고서 메인으로</button>'}};
+V.R5=function(p){var j=job(p.job),t=rtype(p.k);if(!j||!t)return{title:'종이 보고서',back:1,html:'<div class="notice">작업을 찾을 수 없습니다.</div><button class="btn ghost" data-act="rmain">보고서 메인으로</button>'};
+ var f=fget(j.id,t.k)||{checks:{},vals:{}};
+ return{title:'종이 보고서',back:1,html:'<div class="small mute">체크와 내용은 이 종이에서 바로 고칠 수 있습니다. 바꾼 내용은 저장됩니다.</div><div class="paper"><h2>'+esc(t.n)+'</h2><div class="pk">('+esc(j.type)+')</div>'+fieldInputs(j,t,true)+'<div class="ph">점검 결과</div>'+t.pts.map(function(x,i){return'<button class="pchk" data-act="rtick" '+fdata(j,t)+' data-i="'+i+'">'+(f.checks[i]?'☑':'☐')+'  '+esc(x)+'</button>'}).join('')+'<div class="ph">비고</div><textarea data-act="rval" '+fdata(j,t)+' data-key="note">'+esc(fv(j,t.k,'note'))+'</textarea><div class="sig">점검자 서명 ________ &nbsp; 관계인 확인 ________</div></div><button class="btn" data-act="print">인쇄·PDF 저장</button><button class="btn blue" data-act="back">체크·내용 수정</button><button class="btn ghost" data-act="rmain">보고서 메인으로</button>'}};
 V.R2=function(p){var r=rep(p.id),b=bld(r.bld);return{title:'점검 보고서',back:1,html:'<div class="card"><b>'+esc(b.name)+' · '+esc(r.date)+'</b><div class="small mute">'+esc(r.id)+' · '+pill(repState(r),RS[repState(r)])+'</div></div>'+reportBody(r)+'<button class="btn ghost" data-go="O1" data-id="'+r.id+'">건물주 화면 미리보기</button>'+(isOp()?'<button class="btn blue" data-go="R3" data-id="'+r.id+'">'+(r.sent?'다시 발송':'건물주에게 발송')+'</button>':'')}};
 V.R3=function(p){var r=rep(p.id),b=bld(r.bld),link=location.origin==='null'||!location.origin?'https://example.invalid/r/'+r.token.slice(0,4):(location.origin+'/r/'+r.token.slice(0,4));var d=UI.draft&&UI.draft.k==='send'&&UI.draft.id===r.id?UI.draft:(UI.draft={k:'send',id:r.id,to:b.owner,how:'알림톡',days:'7'});
  return{title:'발송',back:1,html:'<label class="f">수신자<input data-act="d" data-f="to" value="'+esc(d.to)+'"></label><label class="f">발송 방식<select data-act="d" data-f="how">'+['알림톡','문자','링크 복사'].map(function(x){return'<option'+(x===d.how?' selected':'')+'>'+x+'</option>'}).join('')+'</select></label><label class="f">열람 만료<select data-act="d" data-f="days">'+[['3','3일'],['7','7일'],['14','14일'],['30','30일']].map(function(x){return'<option value="'+x[0]+'"'+(x[0]===d.days?' selected':'')+'>'+x[1]+'</option>'}).join('')+'</select></label><div class="card"><div class="small mute">열람 링크 (예시 주소)</div><div class="mono small" style="overflow-wrap:anywhere">'+esc(link)+'</div></div><div class="notice a">이 시험판은 실제 알림톡·문자를 보내지 않고 발송 상태만 기록합니다.</div><button class="btn blue" data-act="send">발송</button>'}};
@@ -522,6 +555,12 @@ window.addEventListener('offline',render);
 
 function A(act,el,e){var v=el.dataset.v,c=cur(),p=c.p,j,b,r,i;
  switch(act){
+ case'rj':UI.rj=el.value;return render();
+ case'rton':{var fo=fmk(el.dataset.j,el.dataset.k);fo.on=!fo.on;fsave(fo);if(fo.on)return go('R4',{job:fo.job,k:fo.k});return render()}
+ case'rtick':{var fo2=fmk(el.dataset.j,el.dataset.k),ix=el.dataset.i;fo2.checks[ix]=!fo2.checks[ix];fo2.on=true;fsave(fo2);return render()}
+ case'rval':{var fo3=fmk(el.dataset.j,el.dataset.k);fo3.vals[el.dataset.key]=el.value;fo3.on=true;fsave(fo3);return}
+ case'rmain':return tab('rep');
+ case'print':return window.print();
  case'consent':UI.consent=!UI.consent;return render();
  case'e1next':ST.consentDone=true;save();return render();
  case'org':ST.role=v;ST.uid=v==='operator'?'u3':'u1';ST.tab='home';stack=[];save();return render();
@@ -596,7 +635,7 @@ function A(act,el,e){var v=el.dataset.v,c=cur(),p=c.p,j,b,r,i;
  }}
 document.addEventListener('click',function(e){var t=e.target;if(!t.closest)return;
  var g=t.closest('[data-go]');
- if(g&&!t.closest('[data-act]')){var d=g.dataset,s=d.go,p={};if(d.id)p.id=d.id;if(d.fac)p.fac=d.fac;if(d.pre){UI.draft=null;UI.draft={k:'job',bld:d.pre,type:'작동점검',date:addD(1),who:'',all:true}}
+ if(g&&!t.closest('[data-act]')){var d=g.dataset,s=d.go,p={};if(d.id)p.id=d.id;if(d.fac)p.fac=d.fac;if(d.job)p.job=d.job;if(d.k)p.k=d.k;if(d.pre){UI.draft=null;UI.draft={k:'job',bld:d.pre,type:'작동점검',date:addD(1),who:'',all:true}}
   if(s==='B5'||s==='B6'){UI.draft=null;UI.csv=null}if(s==='J8'&&!d.pre)UI.draft=null;return go(s,p)}
  var a=t.closest('[data-act]');if(!a)return;var tag=a.tagName;if(tag==='SELECT'||(tag==='INPUT'&&a.type!=='checkbox')||tag==='TEXTAREA')return;if(tag==='LABEL')return;A(a.dataset.act,a,e)});
 document.addEventListener('change',function(e){var a=e.target.closest&&e.target.closest('[data-act]');if(!a)return;var tag=a.tagName;if(tag==='SELECT'||(tag==='INPUT')||tag==='TEXTAREA'){if(a.dataset.act==='bq'||a.dataset.act==='dq')return;A(a.dataset.act,a,e)}});

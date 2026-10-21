@@ -131,7 +131,7 @@ service cloud.firestore {
       }
     }
 
-    // ───── 폰 앱 (m/) 전용 컬렉션: mbuildings · mjobs · mreports · mphotos · mmeta ─────
+    // ───── 폰 앱 (m/) 전용 컬렉션: mbuildings · mjobs · mreports · mforms · mphotos · mmeta ─────
     // 기존 buildings/jobs/reports 와 겹치지 않는다. 사용 중인 관리자(admin)·점검자(inspector)만 접근.
     function isInspector() { return role() == 'inspector'; }
     function changedOnly(keys) {
@@ -165,6 +165,13 @@ service cloud.firestore {
     }
 
     // 사진(작업·설비별 문서): 점검자는 본인 작업이 제출되기 전까지만 쓸 수 있음
+    // 보고서 작성(체크포인트·종이 보고서) 데이터. 문서 id = {작업id}__{보고서종류}
+    match /mforms/{id} {
+      allow read: if isAdmin() || (isInspector() && resource.data.by == request.auth.uid);
+      allow create: if isAdmin() || (isInspector() && request.resource.data.by == request.auth.uid);
+      allow update: if isAdmin() || (isInspector() && resource.data.by == request.auth.uid && request.resource.data.by == request.auth.uid);
+      allow delete: if isAdmin();
+    }
     match /mphotos/{id} {
       allow read: if isAdmin() || (isInspector() && (resource == null || resource.data.who == request.auth.uid));
       allow create, update: if isAdmin()
