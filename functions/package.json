@@ -1,2 +1,2 @@
-{ "name": "fire-api", "private": true, "main": "index.js", "engines": { "node": "20" },
+{ "name": "fire-api", "private": true, "main": "index.js", "engines": { "node": "22" },
   "dependencies": { "firebase-admin": "^12.0.0", "firebase-functions": "^6.0.0" } }
