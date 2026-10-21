@@ -140,6 +140,10 @@ function seedBld(i,owner,tel){var l=LEDGER[i];return{id:'b'+(i+1),name:l.name,lo
 function emptyRes(scope){var r={};scope.forEach(function(k){r[k]={done:false,items:FAC[k].items.map(function(t){return{t:t,r:null,c:false}}),photos:[],note:''}});return r}
 function doneRes(scope,defectFac){var r=emptyRes(scope);scope.forEach(function(k){r[k].done=true;r[k].items.forEach(function(it,i){it.r='정상';it.c=true});
   if(k===defectFac){r[k].items[3]&&(r[k].items[3].r='보수필요');if(r[k].items[3])r[k].note='외측 부식 확인, 교체 권장'}});return r}
+function sampleForms(){var o=[];[['J-101','b1','u1'],['J-102','b2','u1'],['J-103','b3','u2']].forEach(function(x){
+ o.push({id:x[0]+'__result',job:x[0],bld:x[1],k:'result',by:x[2],on:true,checks:{0:true,1:true,2:true},vals:{note:'샘플 초안: 소화기 압력 재확인 필요'},at:''});
+ o.push({id:x[0]+'__sheet',job:x[0],bld:x[1],k:'sheet',by:x[2],on:true,checks:{0:true},vals:{},at:''});
+ o.push({id:x[0]+'__plan',job:x[0],bld:x[1],k:'plan',by:x[2],on:true,checks:{},vals:{due:'2026-11-05'},at:''})});return o}
 function seed(){
  var b=[seedBld(0,'푸른솔 관리단','010-1111-0001'),seedBld(1,'중앙빌딩 관리사무소','010-1111-0002'),seedBld(2,'한빛 관리사무소','010-1111-0003')];
  var sc4=FKEYS.slice(),sc2=['ext','det'];
@@ -155,7 +159,7 @@ function seed(){
  jobs[0].res.ext.done=true;jobs[0].res.ext.items.forEach(function(it){it.r='정상';it.c=true});
  function rep(id,job,ack,sent){return{id:id,job:job.id,bld:job.bld,date:job.sub,by:job.who,res:clone(job.res),sent:sent,sentTo:sent?'관리사무소':'',expire:sent?addD(7):'',ack:ack,token:rnd()+rnd(),sig:'',synced:true,at:job.sub}}
  var reps=[rep('R-090',jobs[5],null,true),rep('R-091',jobs[6],{memo:'확인했습니다',req:false,at:'09/06 10:12'},true)];
- return{v:1,consent:false,role:'',uid:'',org:'',offline:false,forms:[],queue:[],buildings:b,jobs:jobs,reports:reps,staff:clone(STAFF0),
+ return{v:1,consent:false,role:'',uid:'',org:'',offline:false,forms:sampleForms(),queue:[],buildings:b,jobs:jobs,reports:reps,staff:clone(STAFF0),
   notif:{due:true,assign:true,ack:false},org_info:{name:'세이프파트너스',biz:'123-45-67890',tel:'031-000-0000',plan:'건물 50곳'},rules:{det:70,ext:200,spr:1000,hyd:3000},tab:'home'}
 }
 var ST;try{ST=JSON.parse(localStorage.getItem(KEY)||'null')}catch(e){ST=null}
