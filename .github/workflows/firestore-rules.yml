@@ -1,9 +1,6 @@
 name: Deploy Firestore rules
 on:
   workflow_dispatch:
-  push:
-    branches: [main]
-    paths: ['firestore.rules']
 jobs:
   rules:
     runs-on: ubuntu-latest

@@ -103,3 +103,9 @@ python3 -m http.server 8080   # 폰 앱 http://localhost:8080/ , 관리자 웹 h
 ### 건물 등록: 건축물대장 검색
 건물 관리 → 건물 등록 화면 맨 위 "건축물대장에서 찾기"에서 도로명+번지, 동+지번, 건물명으로 검색해 선택하면 이름·주소·주 용도·층수·층별 면적(연면적÷층수 추정)이 채워집니다. 데이터는 `ledger.b64`(약 8MB, 근린생활·판매·업무·숙박·위락·문화집회·운동·의료·관광휴게 시설이 있는 대지 148,368곳)이며 처음 검색할 때만 내려받습니다. 좌표는 OpenStreetMap(Nominatim) 검색값으로 근사 입력하므로 현장에서 보정해야 합니다. 건물주 계정은 대장에 없어 수동 선택입니다.
 
+## 현재 상태 (2026-10-21)
+
+- `https://checkfires.web.app/` — 폰 앱(소방안전점검), `https://checkfires.web.app/admin/` — 관리자 웹(모니터링). 앱 더보기 ↔ 관리자 로고로 서로 이동.
+- Firestore 보안 규칙은 PC에서 `firebase deploy --only firestore:rules --project checkfires`로 배포 완료. 규칙을 바꿀 때마다 같은 명령으로 다시 배포합니다 (GitHub Actions의 `Deploy Firestore rules`는 서비스 계정에 *Firebase Rules Admin* 역할을 준 뒤에만 동작하는 수동 실행용).
+- 화면 구조·링크 와이어프레임(Figma): https://www.figma.com/design/R7y8QvDFVY2Qm0DanFcS6f
+- 병합이 끝난 브랜치는 GitHub의 Branches 화면에서 삭제해도 됩니다 (main만 남기면 됩니다).
