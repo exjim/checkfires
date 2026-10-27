@@ -30,6 +30,12 @@ const fs = require('fs');
     ['점검자: 제출된 작업 사진 저장 불가', assertFails(I.doc('mphotos/j3__ext').set({ jobId: 'j3', who: 'I', list: [] }))],
     ['관리자: 보고서 수정', assertSucceeds(A.doc('mreports/r1').update({ sent: true }))],
     ['점검자: 설정 쓰기 불가', assertFails(I.doc('mmeta/settings').set({ rules: {} }))],
+    ['점검자: 소화기 등록', assertSucceeds(I.doc('mext/e1').set({ bld: 'b1', pass: 'X' }))],
+    ['점검자: 소화기 이력 추가', assertSucceeds(I.doc('mextlog/l1').set({ ext: 'e1', ev: '등록' }))],
+    ['점검자: 소화기 이력 수정 불가', assertFails(I.doc('mextlog/l1').update({ ev: '폐기' }))],
+    ['관리자: 소화기 이력 삭제 불가', assertFails(A.doc('mextlog/l1').delete())],
+    ['점검자: 소화기 삭제 불가', assertFails(I.doc('mext/e1').delete())],
+    ['익명: 소화기 읽기 불가', assertFails(N.doc('mext/e1').get())],
   ];
   let bad = 0;
   for (const [n, p] of t) { try { await p; console.log('PASS', n); } catch (e) { bad++; console.log('FAIL', n, e.message); } }
