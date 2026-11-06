@@ -573,9 +573,9 @@ V.X1=function(p){var b=bld(p.id||UI.xb);if(!ST.buildings.length)return{title:'�
  var c=lyCtx(b),lg=exLegal(b),all=exOf(b.id),live=all.filter(function(e){return e.state==='사용중'}),cn=exCnt(b.id),pct=lg?Math.min(100,Math.round(live.length/lg*100)):0,h='';
  h+='<div class="card stack"><label class="f">건물<select data-act="xbld">'+ST.buildings.map(function(x){return'<option value="'+esc(x.id)+'"'+(x.id===b.id?' selected':'')+'>'+esc(x.name)+'</option>'}).join('')+'</select></label></div>';
  h+=kpi([['등록 / 법정',live.length+' / '+lg],['교체 필요',cn.exp],['교체 임박',cn.soon],['폐기·교체됨',all.length-live.length]])+progBar(pct,'실제 등록 수 / 법정 설치 수 '+live.length+' / '+lg+'  (등록 전에는 0)');
- h+='<button class="btn blue" data-go="X2" data-id="'+esc(b.id)+'">+ 소화기 등록</button>';
+ h+='<button class="btn blue" data-go="X2" data-id="'+esc(b.id)+'">+ 소화기 등록</button>';if(lg>live.length)h+='<div class="notice">건물 정보(층·면적·용도)로 층별 법정 수량을 계산해 미등록 자리를 아래에 보여줍니다. 자리마다 라벨을 촬영해 등록하세요.</div>';
  var known={};c.fl.forEach(function(f){known[f.key]=1;var l=live.filter(function(e){return e.fk===f.key}),g=exLegalFl(b,f.key);
-  h+='<h3>'+esc(f.key)+' <span class="small mute">'+l.length+' / '+g+'</span></h3>'+(l.length?l.map(exCard).join(''):'<div class="notice'+(g?' a':'')+'">'+(g?'법정 '+g+'대 중 등록된 소화기가 없습니다.':'법정 설치 대상이 아닙니다.')+'</div>')});
+  h+='<h3>'+esc(f.key)+' <span class="small mute">'+l.length+' / '+g+'</span></h3>'+(l.length?l.map(exCard).join(''):(g?'':'<div class="notice">법정 설치 대상이 아닙니다.</div>'))+exSlots(b,l,f.key)});
  var oth=live.filter(function(e){return !known[e.fk]});if(oth.length)h+='<h3>기타 <span class="small mute">'+oth.length+'</span></h3>'+oth.map(exCard).join('');
  var gone=all.filter(function(e){return e.state!=='사용중'});if(gone.length)h+='<h3>폐기·교체된 소화기</h3>'+gone.map(exCard).join('');
  var lg2=ST.extlog.filter(function(l){return l.bld===b.id}).sort(function(a,x){return a.at<x.at?1:-1}).slice(0,8);
@@ -583,11 +583,12 @@ V.X1=function(p){var b=bld(p.id||UI.xb);if(!ST.buildings.length)return{title:'�
  h+='<div class="small mute">내용연수는 수동식 분말소화기 10년을 기준으로 제조·검사일에서 계산합니다. 교체 예정일은 직접 고칠 수 있습니다. 소화기 수량은 층별 필수 설비 기준(NFTC 101) 계산입니다.</div>';
  return{title:'소화기 대장',back:1,html:h}};
 function exDraft(p){var e=ST.exts.find(function(x){return x.id===p.id});if(e)return Object.assign({k:'ext',edit:e.id},{bld:e.bld,fk:e.fk,loc:e.loc,pass:e.pass,maker:e.maker,typeNo:e.typeNo,kind:e.kind,agent:e.agent,cap:e.cap,unit:e.unit==null?'':e.unit,made:e.made,life:e.life||10,repl:e.repl||'',note:''});
- var b=bld(p.id);return{k:'ext',bld:b.id,fk:(b.floors[0]&&((b.floors.find(function(f){return f.key==='1F'})||b.floors[0]).key))||'1F',loc:'',pass:'',maker:'',typeNo:'',kind:'분말',agent:'분말(ABC)',cap:'',unit:'',made:'',life:10,repl:'',note:''}}
+ var b=bld(p.id);return{k:'ext',bld:b.id,fk:p.fk||(b.floors[0]&&((b.floors.find(function(f){return f.key==='1F'})||b.floors[0]).key))||'1F',loc:'',pass:'',maker:'',typeNo:'',kind:'분말',agent:'분말(ABC)',cap:'',unit:'',made:'',life:10,repl:'',note:''}}
 V.X2=function(p){var d=UI.draft&&UI.draft.k==='ext'?UI.draft:(UI.draft=exDraft(p)),b=bld(d.bld),c=lyCtx(b),auto=d.made?addY(d.made,d.life):'',rep=d.repl||auto;
  var h='<div class="card"><b>'+esc(b.name)+'</b>'+(d.edit?'<div class="small mute">등록한 내용을 수정합니다.</div>':(d.rep?'<div class="small mute">교체한 소화기를 새로 등록합니다. 이전 기록은 교체됨으로 남습니다.</div>':''))+'</div>';
+ h+='<div class="card stack"><b>라벨 사진으로 읽기</b><div class="small mute">소화기 라벨(합격표시·제조년월)을 가까이서 밝게 찍으면 번호와 제조·검사일을 읽어 채웁니다. 읽은 값은 꼭 확인하세요.</div><label class="btn blue" style="text-align:center">'+(d.busy?'읽는 중…':'라벨 촬영·선택')+'<input type="file" accept="image/*" capture="environment" data-act="xcam" style="display:none"'+(d.busy?' disabled':'')+'></label><label class="small"><input type="checkbox" data-act="xkor"'+(d.kor?' checked':'')+'> 한글(제조업체)도 읽기 · 처음 한 번 더 오래 걸립니다</label><div class="small" id="xocr" aria-live="polite">'+esc(d.ocr||'')+'</div></div>';
  h+='<label class="f">합격표시번호<input data-act="xpass" style="font-size:20px;font-weight:700;letter-spacing:.5px" autocapitalize="characters" autocomplete="off" value="'+esc(d.pass)+'" placeholder="예: BC8S-15161"></label>';
- h+='<div class="notice">합격표시번호로 제조사·형식승인번호를 자동 조회하는 서버는 아직 연결되지 않았습니다. 소화기에 붙은 합격표시 라벨을 보고 아래를 입력하세요. 같은 번호를 이전에 등록했다면 자동으로 채워집니다.</div>';
+ h+=exDbCard(d);
  h+='<label class="f">층<select data-act="d" data-f="fk">'+c.fl.map(function(f){return'<option'+(f.key===d.fk?' selected':'')+'>'+esc(f.key)+'</option>'}).join('')+'</select></label>';
  h+='<label class="f">설치 위치<input data-act="d" data-f="loc" value="'+esc(d.loc)+'" placeholder="예: 계단 옆 복도 끝"></label>';
  h+='<label class="f">제조업체<input data-act="d" data-f="maker" value="'+esc(d.maker)+'" placeholder="예: 삼우견기(주)"></label><label class="f">형식승인번호<input data-act="d" data-f="typeNo" value="'+esc(d.typeNo)+'" placeholder="예: 소수 07-5-9"></label>';
@@ -599,13 +600,57 @@ V.X2=function(p){var d=UI.draft&&UI.draft.k==='ext'?UI.draft:(UI.draft=exDraft(p
  return{title:d.edit?'소화기 수정':'소화기 등록',back:1,html:h}};
 V.X3=function(p){var e=ST.exts.find(function(x){return x.id===p.id});if(!e)return{title:'소화기',back:1,html:'<div class="notice">소화기를 찾을 수 없습니다.</div>'};var b=bld(e.bld),s=exSt(e),live=e.state==='사용중',h='';
  var row=function(a,v){return'<div class="row" style="padding:6px 0;border-bottom:1px solid var(--line)"><span class="mute">'+a+'</span><span class="sp"></span><b style="text-align:right">'+esc(v||'-')+'</b></div>'};
- h+='<div class="card stack"><div class="row"><h2 class="mono" style="font-size:20px">'+esc(e.pass)+'</h2><span class="sp"></span>'+pill(s.t,s.c)+'</div>'+row('건물',b.name)+row('층 · 위치',e.fk+' · '+(e.loc||'-'))+row('제조업체',e.maker)+row('형식승인번호',e.typeNo)+row('종류 · 약제',[e.kind,e.agent].filter(Boolean).join(' · '))+row('용량 · 능력단위',[e.cap,e.unit!==''&&e.unit!=null?e.unit+'단위':''].filter(Boolean).join(' · '))+row('검사·제조일자',e.made)+row('내용연수',(e.life||10)+'년')+row('교체 예정일',e.repl)+'</div>';
+ h+='<div class="card stack"><div class="row"><h2 class="mono" style="font-size:20px">'+esc(e.pass)+'</h2><span class="sp"></span>'+pill(s.t,s.c)+'</div>'+row('건물',b.name)+row('층 · 위치',e.fk+' · '+(e.loc||'-'))+row('제조업체',e.maker)+row('형식승인번호',e.typeNo)+row('종류 · 약제',[e.kind,e.agent].filter(Boolean).join(' · '))+row('용량 · 능력단위',[e.cap,e.unit!==''&&e.unit!=null?e.unit+'단위':''].filter(Boolean).join(' · '))+row('검사·제조일자',e.made)+row('내용연수',(e.life||10)+'년')+row('교체 예정일',e.repl)+(e.svc?row('정비업체(DB)',e.svc+(e.svcLast?' · '+e.svcLast:'')):'')+'</div>';
+ if(live)h+=exHow(e);
  if(live){h+='<div class="card stack"><b>점검 결과 기록</b><input data-act="xnote" id="xn" placeholder="메모 (예: 압력계 바늘이 노란 구간)" value="'+esc(UI.xnote||'')+'"><div class="row" style="gap:8px"><button class="btn ghost sm" style="flex:1" data-act="xchk" data-v="ok">이상 없음</button><button class="btn ghost sm" style="flex:1" data-act="xchk" data-v="bad">이상 있음</button></div></div>';
   h+='<div class="row" style="gap:8px"><button class="btn ghost sm" style="flex:1" data-go="X2" data-id="'+esc(e.id)+'">수정</button><button class="btn ghost sm" style="flex:1" data-act="xrepl" data-id="'+esc(e.id)+'">교체 처리</button></div>';
   h+=UI.xdis===e.id?'<div class="notice r">폐기 처리하면 법정 수량 계산에서 빠집니다. 기록은 이력에 남습니다.</div><div class="row" style="gap:8px"><button class="btn bad sm" style="flex:1" data-act="xdis" data-id="'+esc(e.id)+'" data-v="1">폐기 확정</button><button class="btn ghost sm" style="flex:1" data-act="xdis" data-v="0">취소</button></div>':'<button class="btn ghost" data-act="xdis" data-id="'+esc(e.id)+'" data-v="ask">폐기</button>'}
  var ls=ST.extlog.filter(function(l){return l.ext===e.id}).sort(function(a,x){return a.at<x.at?1:-1});
  h+='<h3>이력 '+ls.length+'건</h3>'+(ls.length?ls.map(function(l){return'<div class="card"><div class="row"><span class="small mute">'+esc(l.d)+'</span>'+pill(l.ev,l.ev==='점검'?'p-b':l.ev==='폐기'||l.ev==='교체'?'p-r':'p-g')+'<span class="sp"></span><span class="small mute">'+esc(l.byName||'')+'</span></div>'+(l.note?'<div class="small">'+esc(l.note)+'</div>':'')+(l.job?'<div class="small mute">작업 '+esc(l.job)+'</div>':'')+'</div>'}).join(''):'<div class="notice">이력이 없습니다.</div>');
  return{title:'소화기',back:1,html:h}};
+
+/* ---------- 소화기 등록 보조: 라벨 사진 읽기(OCR) · 정비 이력 DB · 초기 리스트 · 점검 방법 ---------- */
+var EXDB=null,EXDBP=null,EXIDX={};
+function exKey(s){return String(s||'').toUpperCase().replace(/[^A-Z0-9]/g,'')}
+function exCanon(s){var t=exKey(s),m=t.match(/^([A-Z0-9]{2,4})(\d{5})$/);if(m)return m[1]+'-'+m[2];m=t.match(/^(\d{5})([A-Z]{2,4})$/);return m?m[2]+'-'+m[1]:String(s||'').toUpperCase().trim()}
+function exDbLoad(){if(EXDB||EXDBP)return EXDBP;EXDBP=fetch('extdb.json').then(function(r){if(!r.ok)throw new Error('HTTP '+r.status);return r.json()}).then(function(j){EXDB=j;EXIDX={};j.r.forEach(function(r){var k=exKey(r[0]);(EXIDX[k]=EXIDX[k]||[]).push(r)});if(cur().s==='X2'&&UI.draft&&UI.draft.k==='ext')render()}).catch(function(){EXDBP=null});return EXDBP}
+function exDbLook(pass){var k=exKey(pass),h=EXIDX[k];if(!h){var m=k.match(/^(\d{5})([A-Z]{2,4})$/);if(m)h=EXIDX[m[2]+m[1]]}if(!h)return null;
+ var last=h.slice().sort(function(a,b){return a[2]<b[2]?1:-1})[0];return{n:h.length,svc:EXDB.co[last[1]],last:last[2],kg:last[3]}}
+function exNear(pass){var k=exKey(pass),m=k.match(/^([A-Z0-9]{2,4})(\d{5})$/),o=[],q;if(!m)return o;for(q in EXIDX){var a=q.match(/^([A-Z0-9]{2,4})(\d{5})$/);if(!a||a[1].length!==m[1].length)continue;var n=0,i;for(i=0;i<5;i++)if(a[2][i]!==m[2][i])n++;for(i=0;i<m[1].length;i++)if(a[1][i]!==m[1][i])n++;if(n===1){o.push(exCanon(q));if(o.length>=3)break}}return o}
+/* OCR이 자주 틀리는 글자(0↔O, 1↔I, 5↔S, 8↔B)를 자리 종류에 맞게 고친다. 영문 2~4자 + 숫자 5자리 */
+function exRepair(tok){var t=exKey(tok);function fx(L,D){L=L.replace(/0/g,'O').replace(/1/g,'I').replace(/5/g,'S').replace(/8/g,'B');D=D.replace(/[OQD]/g,'0').replace(/[IL]/g,'1').replace(/S/g,'5').replace(/B/g,'8').replace(/Z/g,'2');return(/^[A-Z]{2,4}$/.test(L)&&/^\d{5}$/.test(D))?L+'-'+D:''}
+ var m=t.match(/^([A-Z]{2,4})(\d{5})$/);if(m)return m[1]+'-'+m[2];m=t.match(/^(\d{5})([A-Z]{2,4})$/);if(m)return m[2]+'-'+m[1];
+ return(t.length>=7&&t.length<=9)?(fx(t.slice(0,t.length-5),t.slice(-5))||fx(t.slice(5),t.slice(0,5))):''}
+function exParse(txt){var t=String(txt||''),o={pass:'',made:'',cap:'',kind:''},c=(t.match(/[A-Za-z0-9]{2,4}\s*[-–]?\s*[A-Za-z0-9]{5}(?![A-Za-z0-9])/g)||[]).concat(t.match(/(?:^|[^A-Za-z0-9])[0-9]{5}\s*[-–]?\s*[A-Za-z]{2,4}(?![A-Za-z0-9])/g)||[]),i,any='',best='';
+ for(i=0;i<c.length;i++){var r=exRepair(c[i]);if(!r)continue;if(!any)any=r;if(EXIDX[exKey(r)]){best=r;break}}o.pass=best||any;
+ var m=t.match(/(?:제조\s*(?:년월|연월|일자?)|검사\s*(?:년월|일자?)|MFG|DATE)[^0-9]{0,8}((?:19|20)\d\d)\s*[.\-\/년]?\s*(\d{1,2})?/i)||t.match(/((?:19|20)[0-2]\d)\s*[.\-\/년]\s*(\d{1,2})\s*월?/);
+ if(m)o.made=m[1]+'-'+('0'+(m[2]||'1')).slice(-2)+'-01';
+ m=t.match(/(\d+(?:[.,]\d+)?)\s*(?:kg|㎏|KG|Kg)/);if(m)o.cap=m[1].replace(',','.')+'kg';
+ if(/CO\s*2|이산화탄소/i.test(t))o.kind='이산화탄소';else if(/할로|할론/.test(t))o.kind='할로겐화합물';else if(/강화액/.test(t))o.kind='강화액';else if(/ABC|분말/.test(t))o.kind='분말';
+ return o}
+var TESS='https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/tesseract.min.js';
+function exLoadTess(){return window.Tesseract?Promise.resolve():new Promise(function(res,rej){var s=document.createElement('script');s.src=TESS;s.onload=res;s.onerror=function(){rej(new Error('읽기 모듈을 불러오지 못했습니다. 인터넷 연결을 확인하세요.'))};document.head.appendChild(s)})}
+function exPrep(file){return new Promise(function(res,rej){var u=URL.createObjectURL(file),im=new Image();im.onload=function(){var sc=Math.min(1,1800/Math.max(im.width,im.height)),c=document.createElement('canvas');c.width=Math.round(im.width*sc);c.height=Math.round(im.height*sc);var x=c.getContext('2d');x.drawImage(im,0,0,c.width,c.height);
+ try{var d=x.getImageData(0,0,c.width,c.height),a=d.data,i,g;for(i=0;i<a.length;i+=4){g=.3*a[i]+.59*a[i+1]+.11*a[i+2];g=Math.max(0,Math.min(255,(g-128)*1.35+128));a[i]=a[i+1]=a[i+2]=g}x.putImageData(d,0,0)}catch(e){}
+ URL.revokeObjectURL(u);res(c)};im.onerror=function(){URL.revokeObjectURL(u);rej(new Error('사진을 열 수 없습니다.'))};im.src=u})}
+function exSetMsg(m){var d=UI.draft;if(d)d.ocr=m;var el=$('#xocr');if(el)el.textContent=m}
+function exOcr(file){var d=UI.draft;if(!d||d.k!=='ext')return;d.busy=true;exSetMsg('읽는 중입니다. 처음에는 읽기 모듈을 내려받느라 1분 정도 걸릴 수 있습니다.');render();
+ return exDbLoad(),exLoadTess().then(function(){return exPrep(file)}).then(function(cv){return window.Tesseract.recognize(cv,d.kor?'kor+eng':'eng',{logger:function(m){if(m&&m.status==='recognizing text')exSetMsg('글자 읽는 중 '+Math.round((m.progress||0)*100)+'%')}})}).then(function(r){
+  var txt=(r&&r.data&&r.data.text)||'',p=exParse(txt),miss=[];d.busy=false;d.raw=txt.slice(0,400);
+  if(p.pass)d.pass=p.pass;else miss.push('합격표시번호');if(p.made)d.made=p.made;else miss.push('제조·검사일');if(p.cap&&!d.cap)d.cap=p.cap;if(p.kind&&!d.edit)d.kind=p.kind;
+  var pr=ST.exts.find(function(x){return x.pass===d.pass&&x.id!==d.edit});if(pr)['maker','typeNo','agent','cap','unit'].forEach(function(f){if(!d[f])d[f]=pr[f]});
+  d.ocr='읽은 값입니다. 틀린 곳은 고친 뒤 등록하세요.'+(miss.length?' 읽지 못한 항목: '+miss.join(', ')+'.':'');render()
+ }).catch(function(e){d.busy=false;d.ocr=(e&&e.message)||'읽지 못했습니다. 직접 입력하세요.';render()})}
+function exDbCard(d){if(!d.pass)return'<div class="small mute">합격표시번호를 입력하면 정비 이력 DB에서 찾아 줍니다.</div>';exDbLoad();if(!EXDB)return'<div class="small mute">정비 이력 DB를 불러오는 중입니다…</div>';
+ var k=exDbLook(d.pass);if(k)return'<div class="card"><div class="row">'+pill('정비 DB 일치','p-g')+'<span class="sp"></span><span class="small mute">이력 '+k.n+'건</span></div><div class="small">정비업체 <b>'+esc(k.svc)+'</b> · 최근 정비 '+esc(k.last)+' · '+k.kg+'kg</div>'+(d.cap?'':'<button class="btn ghost sm" data-act="xdbcap" data-v="'+k.kg+'kg">용량 '+k.kg+'kg 적용</button>')+'</div>';
+ var nr=exNear(d.pass);return'<div class="small mute">정비 이력 DB에 없는 번호입니다.'+(nr.length?' 비슷한 번호: '+nr.map(esc).join(', ')+' (읽기 오류인지 확인)':'')+'</div>'}
+var EXCK=[['안전핀·봉인','안전핀이 꽂혀 있고 봉인(실)이 끊어지지 않았는지 봅니다.'],['압력계','지침이 녹색(정상) 범위인지 봅니다. 노랑·빨강이면 불량입니다.'],['호스·노즐','균열·경화·막힘이 없는지 봅니다.'],['본체','녹·찌그러짐·누설 흔적, 제조년월·합격표시 라벨이 읽히는지 봅니다.'],['설치 상태','바닥에서 1.5m 이하, 가려지지 않았는지, 표지, 보행거리 20m 이내를 봅니다.']];
+function exHow(e){var s=exSt(e),a=e.made?(new Date(TODAY+'T00:00:00').getFullYear()-parseInt(e.made.slice(0,4),10)):null,L=e.life||10,n=[],k=exDbLook(e.pass);
+ if(a!==null&&!isNaN(a)){if(a>=L)n.push('제조 후 '+a+'년으로 내용연수('+L+'년)에 도달했습니다. 교체 또는 성능 확인 대상입니다.');else if(a>=L-2)n.push('제조 후 '+a+'년으로 내용연수('+L+'년)가 가깝습니다. 교체 계획을 세우세요.');}else n.push('제조·검사일이 없어 내용연수를 판단할 수 없습니다.');
+ if(k)n.push('정비 이력 DB: '+k.svc+' · 최근 정비 '+k.last+' · '+k.n+'건. 이후 정비 기록이 없으면 정비업체에 확인하세요.');
+ if(e.maker)n.push('제조업체 '+e.maker+(e.svc?'':'')+' — 라벨의 제조년월·합격표시 위치는 제조사마다 다르니 본체 뒷면까지 확인하세요.');
+ return'<div class="card stack"><b>점검 방법</b>'+EXCK.map(function(c){return'<div class="small"><b>'+c[0]+'</b> · '+esc(c[1])+'</div>'}).join('')+n.map(function(t){return'<div class="small" style="color:var(--amber)">'+esc(t)+'</div>'}).join('')+'<div class="small mute">점검 항목과 내용연수는 일반 기준이며 현행 법령과 전문가 확인이 필요합니다.</div></div>'}
+function exSlots(b,l,fk){var g=exLegalFl(b,fk),n=Math.max(0,g-l.length),w=(T.ext&&T.ext.where)||'계단 인근, 구획 끝 벽',h='',i;for(i=0;i<n;i++)h+='<div class="card"><div class="row"><b>미등록</b><span class="sp"></span>'+pill('초기 리스트','p-a')+'</div><div class="small mute">권장 위치: '+esc(w)+'</div><button class="btn blue sm" data-act="xslot" data-id="'+esc(b.id)+'" data-fk="'+esc(fk)+'" data-loc="'+esc(w.split(',')[0])+'">라벨 촬영해 등록</button></div>';return h}
 /* ---------- 고시 서식 (별지 제3·4·5호) 종이 보고서: 점검 결과를 서식 칸에 채움 ---------- */
 var MK={'정상':'○','보수필요':'×','불량':'×','해당없음':'/'};
 var CATS=[['소화설비',[['소화기구 및 자동소화장치','ext','1-A'],['옥내소화전설비','hyd',''],['스프링클러설비'],['간이스프링클러설비'],['화재조기진압용스프링클러설비'],['물분무소화설비'],['미분무소화설비'],['포소화설비'],['이산화탄소소화설비'],['할론소화설비'],['할로겐화합물 및 불활성기체소화설비'],['분말소화설비'],['옥외소화전설비']]],
@@ -728,15 +773,19 @@ function A(act,el,e){var v=el.dataset.v,c=cur(),p=c.p,j,b,r,i;
 
  case'rateall':j=job(p.id);r=j.res[p.fac];r.items.forEach(function(x){if(!x.r)x.r='정상'});r.done=false;save();return render();
  case'xbld':UI.xb=el.value;stack[stack.length-1].p={id:el.value};return render();
- case'xpass':{var d0=UI.draft;if(!d0)return;d0.pass=el.value.trim().toUpperCase();var pr=ST.exts.find(function(x){return x.pass===d0.pass&&x.id!==d0.edit});
+ case'xpass':{var d0=UI.draft;if(!d0)return;d0.pass=exCanon(el.value.trim());exDbLoad();var pr=ST.exts.find(function(x){return x.pass===d0.pass&&x.id!==d0.edit});
   if(pr){['maker','typeNo','kind','agent','cap','unit','made','life'].forEach(function(f2){if(!d0[f2]&&d0[f2]!==0||f2==='kind'&&!d0.edit&&d0.kind==='분말')d0[f2]=pr[f2]});d0.msg='이전에 등록한 번호입니다. 제조사·형식승인번호·검사일을 채웠습니다.';toast(d0.msg)}render();return}
  case'xsave':{var d1=UI.draft;if(!d1)return;if(!d1.pass)return toast('합격표시번호를 입력하세요.');if(!d1.made)return toast('검사·제조일자를 입력하세요.');if(!(+d1.life>=1))return toast('내용연수를 확인하세요.');
   var dup=ST.exts.find(function(x){return x.bld===d1.bld&&x.pass===d1.pass&&x.state==='사용중'&&x.id!==d1.edit});if(dup)return toast('같은 건물에 같은 합격표시번호가 이미 등록되어 있습니다.');
-  var repl=d1.repl||addY(d1.made,d1.life),vals={bld:d1.bld,fk:d1.fk,loc:d1.loc.trim(),pass:d1.pass,maker:d1.maker.trim(),typeNo:d1.typeNo.trim(),kind:d1.kind,agent:d1.agent.trim(),cap:d1.cap.trim(),unit:d1.unit===''?'':+d1.unit,made:d1.made,life:+d1.life,repl:repl};
+  var repl=d1.repl||addY(d1.made,d1.life),vals={bld:d1.bld,fk:d1.fk,loc:d1.loc.trim(),pass:d1.pass,maker:d1.maker.trim(),typeNo:d1.typeNo.trim(),kind:d1.kind,agent:d1.agent.trim(),cap:d1.cap.trim(),unit:d1.unit===''?'':+d1.unit,made:d1.made,life:+d1.life,repl:repl},sv=exDbLook(d1.pass);if(sv){vals.svc=sv.svc;vals.svcLast=sv.last}
   if(d1.edit){var e0=ST.exts.find(function(x){return x.id===d1.edit});Object.assign(e0,vals);exLog(e0,'수정',d1.note||'내용 수정')}
-  else{var ne=Object.assign({id:'e-'+rnd()+rnd(),state:'사용중',at:new Date().toISOString(),by:ST.uid||''},vals);ST.exts.push(ne);exLog(ne,'등록',d1.rep?'교체 등록 · 이전 '+(d1.repPass||''):(d1.note||''))}
+  else{var ne=Object.assign({id:'e-'+rnd()+rnd(),state:'사용중',at:new Date().toISOString(),by:ST.uid||''},vals);ST.exts.push(ne);exLog(ne,'등록',d1.rep?'교체 등록 · 이전 '+(d1.repPass||''):[d1.note||'',sv?'정비 DB '+sv.svc+' 최근 '+sv.last:''].filter(Boolean).join(' · '))}
   UI.draft=null;save();stack.pop();render();return toast(d1.edit?'수정했습니다.':'소화기를 등록했습니다.')}
  case'xnote':UI.xnote=el.value;return;
+ case'xcam':{var f0=el.files&&el.files[0];if(f0)exOcr(f0);return}
+ case'xkor':if(UI.draft)UI.draft.kor=!!el.checked;return;
+ case'xdbcap':if(UI.draft){UI.draft.cap=v;render()}return;
+ case'xslot':{UI.draft=exDraft({id:el.dataset.id,fk:el.dataset.fk});UI.draft.loc=el.dataset.loc||'';go('X2',{id:el.dataset.id});return}
  case'xchk':{var e1=ST.exts.find(function(x){return x.id===p.id});if(!e1)return;var nt=($('#xn')?$('#xn').value:'').trim();exLog(e1,'점검',(v==='ok'?'이상 없음':'이상 있음')+(nt?' · '+nt:''));UI.xnote='';save();render();return toast('점검 결과를 기록했습니다.')}
  case'xrepl':{var e2=ST.exts.find(function(x){return x.id===el.dataset.id});if(!e2)return;e2.state='교체됨';exLog(e2,'교체','교체 처리');save();UI.draft={k:'ext',bld:e2.bld,fk:e2.fk,loc:e2.loc,pass:'',maker:'',typeNo:'',kind:e2.kind,agent:e2.agent,cap:e2.cap,unit:e2.unit==null?'':e2.unit,made:'',life:e2.life||10,repl:'',note:'',rep:e2.id,repPass:e2.pass};stack.pop();go('X2',{id:e2.bld});return}
  case'xdis':{if(v==='ask'){UI.xdis=el.dataset.id;return render()}if(v==='0'){UI.xdis='';return render()}var e3=ST.exts.find(function(x){return x.id===el.dataset.id});if(!e3)return;e3.state='폐기';exLog(e3,'폐기','폐기 처리');UI.xdis='';save();render();return toast('폐기 처리했습니다.')}
