@@ -560,11 +560,15 @@ function exOf(bid){return ST.exts.filter(function(e){return e.bld===bid})}
 function exLive(bid){return exOf(bid).filter(function(e){return e.state==='사용중'})}
 function exLegal(b){return lyStat(b,lyGen(b),'ext').req}
 function exLegalFl(b,fk){return lyGen(b).filter(function(d){return d.fk===fk&&d.t==='ext'&&d.basis==='법정'}).length}
+var GRACE_Y=2;
+function exBase(e){return e.made?addY(e.made,e.life||10):''}
+function exSched(e){var base=exBase(e),fin=e.repl||(e.evalAt?addY(base,GRACE_Y):base);return{base:base,fin:fin,grace:!!e.evalAt,left:fin?dayDiff(fin,TODAY):null}}
 function exSt(e){if(e.state!=='사용중')return{t:e.state,c:'p-n',k:0};if(!e.repl)return{t:'교체 기한 미입력',c:'p-a',k:1};var dd=dayDiff(e.repl,TODAY);
+ if(e.evalAt)return dd<0?{t:'교체 필요 · 유예 만료 '+(-dd)+'일 경과',c:'p-r',k:3}:{t:'유예 중 · D-'+dd,c:'p-a',k:2};
  return dd<0?{t:'교체 필요 · '+(-dd)+'일 경과',c:'p-r',k:3}:dd<=365?{t:'교체 임박 · D-'+dd,c:'p-a',k:2}:{t:'정상 · D-'+dd,c:'p-g',k:0}}
 function exCnt(bid){var l=exLive(bid),o={n:l.length,exp:0,soon:0};l.forEach(function(e){var k=exSt(e).k;if(k===3)o.exp++;else if(k===2)o.soon++});return o}
 function exLog(e,ev,note,extra){var l={id:'l-'+rnd()+rnd(),ext:e.id,bld:e.bld,at:new Date().toISOString(),d:TODAY,ev:ev,by:ST.uid||'',byName:me().name||'',job:'',note:note||'',pass:e.pass||''};if(extra)Object.assign(l,extra);ST.extlog.push(l);return l}
-function exCard(e){var s=exSt(e);return'<button class="card tap" data-go="X3" data-id="'+esc(e.id)+'"><div class="row"><b>'+esc(e.loc||e.fk)+'</b><span class="sp"></span>'+pill(s.t,s.c)+'</div><div class="small mono">'+esc(e.pass)+'</div><div class="small mute">'+esc([e.kind,e.agent,e.cap].filter(Boolean).join(' · '))+'</div><div class="small mute">제조·검사 '+esc(e.made||'-')+' → 교체 예정 '+esc(e.repl||'-')+'</div></button>'}
+function exCard(e){var s=exSt(e);return'<button class="card tap" data-go="X3" data-id="'+esc(e.id)+'"><div class="row"><b>'+esc(e.loc||e.fk)+'</b><span class="sp"></span>'+pill(s.t,s.c)+'</div><div class="small mono">'+esc(e.pass)+'</div><div class="small mute">'+esc([e.kind,e.agent,e.cap].filter(Boolean).join(' · '))+'</div><div class="small mute">검사 '+esc(e.made||'-')+' → 교체 예정 '+esc(e.repl||'-')+(e.evalAt?' (유예)':'')+'</div></button>'}
 function extCard(j){var b=bld(j.bld),c=exCnt(b.id),lg=exLegal(b);return'<button class="card tap" data-go="X1" data-id="'+esc(b.id)+'"><div class="row"><b>소화기 대장</b><span class="sp"></span>'+pill(c.n+' / '+lg+'대',c.n>=lg&&lg?'p-g':'p-a')+'</div><div class="small mute">등록한 소화기 수 / 법정 수'+(c.exp?' · 교체 필요 '+c.exp+'대':'')+(c.soon?' · 교체 임박 '+c.soon+'대':'')+'</div></button>'}
 function extHint(j,k,it){if(k!=='ext'||!it.n)return'';var b=bld(j.bld),c=exCnt(b.id),lg=exLegal(b);
  if(it.n==='1-A-008')return c.n?'<div class="small" style="color:'+(c.exp?'var(--bad)':'var(--green)')+'">소화기 대장: '+(c.exp?'교체 기한이 지난 소화기 '+c.exp+'대':'기한이 지난 소화기 없음')+'</div>':'<div class="small mute">소화기 대장에 등록하면 내용연수가 자동 확인됩니다.</div>';
@@ -580,11 +584,11 @@ V.X1=function(p){var b=bld(p.id||UI.xb);if(!ST.buildings.length)return{title:'�
  var gone=all.filter(function(e){return e.state!=='사용중'});if(gone.length)h+='<h3>폐기·교체된 소화기</h3>'+gone.map(exCard).join('');
  var lg2=ST.extlog.filter(function(l){return l.bld===b.id}).sort(function(a,x){return a.at<x.at?1:-1}).slice(0,8);
  h+='<h3>최근 이력</h3>'+(lg2.length?lg2.map(function(l){return'<div class="card"><div class="row"><span class="small mute">'+esc(l.d)+'</span>'+pill(l.ev,l.ev==='점검'?'p-b':l.ev==='폐기'||l.ev==='교체'?'p-r':'p-g')+'<span class="sp"></span><span class="small mono">'+esc(l.pass)+'</span></div>'+(l.note?'<div class="small">'+esc(l.note)+'</div>':'')+'</div>'}).join(''):'<div class="notice">아직 이력이 없습니다.</div>');
- h+='<div class="small mute">내용연수는 수동식 분말소화기 10년을 기준으로 제조·검사일에서 계산합니다. 교체 예정일은 직접 고칠 수 있습니다. 소화기 수량은 층별 필수 설비 기준(NFTC 101) 계산입니다.</div>';
+ h+='<div class="small mute">내용연수는 수동식 분말소화기 10년을 기준으로 검사일자에서 계산하고, 연구원 성능 평가를 받으면 1회에 한해 2년 유예합니다. 교체 예정일은 직접 고칠 수 있습니다. 소화기 수량은 층별 필수 설비 기준(NFTC 101) 계산입니다.</div>';
  return{title:'소화기 대장',back:1,html:h}};
-function exDraft(p){var e=ST.exts.find(function(x){return x.id===p.id});if(e)return Object.assign({k:'ext',edit:e.id},{bld:e.bld,fk:e.fk,loc:e.loc,pass:e.pass,maker:e.maker,typeNo:e.typeNo,kind:e.kind,agent:e.agent,cap:e.cap,unit:e.unit==null?'':e.unit,made:e.made,life:e.life||10,repl:e.repl||'',note:''});
- var b=bld(p.id);return{k:'ext',bld:b.id,fk:p.fk||(b.floors[0]&&((b.floors.find(function(f){return f.key==='1F'})||b.floors[0]).key))||'1F',loc:'',pass:'',maker:'',typeNo:'',kind:'분말',agent:'분말(ABC)',cap:'',unit:'',made:'',life:10,repl:'',note:''}}
-V.X2=function(p){var d=UI.draft&&UI.draft.k==='ext'?UI.draft:(UI.draft=exDraft(p)),b=bld(d.bld),c=lyCtx(b),auto=d.made?addY(d.made,d.life):'',rep=d.repl||auto;
+function exDraft(p){var e=ST.exts.find(function(x){return x.id===p.id});if(e)return Object.assign({k:'ext',edit:e.id},{bld:e.bld,fk:e.fk,loc:e.loc,pass:e.pass,maker:e.maker,typeNo:e.typeNo,kind:e.kind,agent:e.agent,cap:e.cap,unit:e.unit==null?'':e.unit,made:e.made,life:e.life||10,evalAt:e.evalAt||'',repl:e.repl||'',note:''});
+ var b=bld(p.id);return{k:'ext',bld:b.id,fk:p.fk||(b.floors[0]&&((b.floors.find(function(f){return f.key==='1F'})||b.floors[0]).key))||'1F',loc:'',pass:'',maker:'',typeNo:'',kind:'분말',agent:'분말(ABC)',cap:'',unit:'',made:'',life:10,evalAt:'',repl:'',note:''}}
+V.X2=function(p){var d=UI.draft&&UI.draft.k==='ext'?UI.draft:(UI.draft=exDraft(p)),b=bld(d.bld),c=lyCtx(b),auto=d.made?addY(d.made,(+d.life||10)+(d.evalAt?GRACE_Y:0)):'',rep=d.repl||auto;
  var h='<div class="card"><b>'+esc(b.name)+'</b>'+(d.edit?'<div class="small mute">등록한 내용을 수정합니다.</div>':(d.rep?'<div class="small mute">교체한 소화기를 새로 등록합니다. 이전 기록은 교체됨으로 남습니다.</div>':''))+'</div>';
  h+='<div class="card stack"><b>라벨 사진으로 읽기</b><div class="small mute">소화기 라벨(합격표시·제조년월)을 가까이서 밝게 찍으면 번호와 제조·검사일을 읽어 채웁니다. 읽은 값은 꼭 확인하세요.</div><label class="btn blue" style="text-align:center">'+(d.busy?'읽는 중…':'라벨 촬영·선택')+'<input type="file" accept="image/*" capture="environment" data-act="xcam" style="display:none"'+(d.busy?' disabled':'')+'></label><label class="small"><input type="checkbox" data-act="xkor"'+(d.kor?' checked':'')+'> 한글(제조업체)도 읽기 · 처음 한 번 더 오래 걸립니다</label><div class="small" id="xocr" aria-live="polite">'+esc(d.ocr||'')+'</div></div>';
  h+='<label class="f">합격표시번호<input data-act="xpass" style="font-size:20px;font-weight:700;letter-spacing:.5px" autocapitalize="characters" autocomplete="off" value="'+esc(d.pass)+'" placeholder="예: BC8S-15161"></label>';
@@ -594,13 +598,15 @@ V.X2=function(p){var d=UI.draft&&UI.draft.k==='ext'?UI.draft:(UI.draft=exDraft(p
  h+='<label class="f">제조업체<input data-act="d" data-f="maker" value="'+esc(d.maker)+'" placeholder="예: 삼우견기(주)"></label><label class="f">형식승인번호<input data-act="d" data-f="typeNo" value="'+esc(d.typeNo)+'" placeholder="예: 소수 07-5-9"></label>';
  h+='<label class="f">소화기 종류<select data-act="d" data-f="kind">'+EXK.map(function(x){return'<option'+(x===d.kind?' selected':'')+'>'+x+'</option>'}).join('')+'</select></label><label class="f">소화약제<input data-act="d" data-f="agent" value="'+esc(d.agent)+'" placeholder="예: 분말(ABC)"></label>';
  h+='<div class="row" style="gap:8px"><label class="f" style="flex:1">용량<input data-act="d" data-f="cap" value="'+esc(d.cap)+'" placeholder="예: 3.3kg"></label><label class="f" style="flex:1">능력단위(선택)<input type="number" inputmode="decimal" data-act="d" data-f="unit" value="'+esc(d.unit)+'" placeholder="예: 3"></label></div>';
- h+='<label class="f">검사·제조일자<input type="date" data-act="d" data-f="made" value="'+esc(d.made)+'"></label><label class="f">내용연수(년)<input type="number" inputmode="numeric" min="1" max="30" data-act="d" data-f="life" value="'+esc(d.life)+'"></label>';
- h+='<div class="card"><div class="small mute">교체 예정일 (제조·검사일 + 내용연수)</div><b>'+esc(rep||'제조·검사일을 입력하세요')+'</b></div><label class="f">교체 예정일 직접 입력(선택)<input type="date" data-act="d" data-f="repl" value="'+esc(d.repl)+'"></label>';
+ h+='<label class="f">검사일자 (교체 기준일)<input type="date" data-act="d" data-f="made" value="'+esc(d.made)+'"></label><div class="small mute">합격표시 라벨의 검사일자를 넣습니다. 검사일자가 없을 때만 제조년월을 넣으세요.</div><label class="f">내용연수(년)<input type="number" inputmode="numeric" min="1" max="30" data-act="d" data-f="life" value="'+esc(d.life)+'"></label>';
+ h+='<label class="f">성능 평가 완료일 (연구원 안전 평가를 받은 경우, 1회 유예 '+GRACE_Y+'년)<input type="date" data-act="d" data-f="evalAt" value="'+esc(d.evalAt||'')+'"></label>';
+ h+='<div class="card"><div class="small mute">교체 예정일 (검사일자 + 내용연수'+(d.evalAt?' + 유예 '+GRACE_Y+'년':'')+')</div><b>'+esc(rep||'제조·검사일을 입력하세요')+'</b></div><label class="f">교체 예정일 직접 입력(선택)<input type="date" data-act="d" data-f="repl" value="'+esc(d.repl)+'"></label>';
  h+='<label class="f">비고<input data-act="d" data-f="note" value="'+esc(d.note)+'"></label><button class="btn blue" data-act="xsave">'+(d.edit?'수정 저장':'등록')+'</button>';
  return{title:d.edit?'소화기 수정':'소화기 등록',back:1,html:h}};
 V.X3=function(p){var e=ST.exts.find(function(x){return x.id===p.id});if(!e)return{title:'소화기',back:1,html:'<div class="notice">소화기를 찾을 수 없습니다.</div>'};var b=bld(e.bld),s=exSt(e),live=e.state==='사용중',h='';
  var row=function(a,v){return'<div class="row" style="padding:6px 0;border-bottom:1px solid var(--line)"><span class="mute">'+a+'</span><span class="sp"></span><b style="text-align:right">'+esc(v||'-')+'</b></div>'};
- h+='<div class="card stack"><div class="row"><h2 class="mono" style="font-size:20px">'+esc(e.pass)+'</h2><span class="sp"></span>'+pill(s.t,s.c)+'</div>'+row('건물',b.name)+row('층 · 위치',e.fk+' · '+(e.loc||'-'))+row('제조업체',e.maker)+row('형식승인번호',e.typeNo)+row('종류 · 약제',[e.kind,e.agent].filter(Boolean).join(' · '))+row('용량 · 능력단위',[e.cap,e.unit!==''&&e.unit!=null?e.unit+'단위':''].filter(Boolean).join(' · '))+row('검사·제조일자',e.made)+row('내용연수',(e.life||10)+'년')+row('교체 예정일',e.repl)+(e.svc?row('정비업체(DB)',e.svc+(e.svcLast?' · '+e.svcLast:'')):'')+'</div>';
+ h+='<div class="card stack"><div class="row"><h2 class="mono" style="font-size:20px">'+esc(e.pass)+'</h2><span class="sp"></span>'+pill(s.t,s.c)+'</div>'+row('건물',b.name)+row('층 · 위치',e.fk+' · '+(e.loc||'-'))+row('제조업체',e.maker)+row('형식승인번호',e.typeNo)+row('종류 · 약제',[e.kind,e.agent].filter(Boolean).join(' · '))+row('용량 · 능력단위',[e.cap,e.unit!==''&&e.unit!=null?e.unit+'단위':''].filter(Boolean).join(' · '))+row('검사일자',e.made)+row('내용연수',(e.life||10)+'년 → '+(exBase(e)||'-'))+row('성능 평가·유예',e.evalAt?e.evalAt+' 평가 · '+GRACE_Y+'년 유예 적용':'없음')+row('교체 예정일',e.repl)+(e.svc?row('정비업체(DB)',e.svc+(e.svcLast?' · '+e.svcLast:'')):'')+'</div>';
+ if(live)h+=exSchedCard(e);
  if(live)h+=exHow(e);
  if(live){h+='<div class="card stack"><b>점검 결과 기록</b><input data-act="xnote" id="xn" placeholder="메모 (예: 압력계 바늘이 노란 구간)" value="'+esc(UI.xnote||'')+'"><div class="row" style="gap:8px"><button class="btn ghost sm" style="flex:1" data-act="xchk" data-v="ok">이상 없음</button><button class="btn ghost sm" style="flex:1" data-act="xchk" data-v="bad">이상 있음</button></div></div>';
   h+='<div class="row" style="gap:8px"><button class="btn ghost sm" style="flex:1" data-go="X2" data-id="'+esc(e.id)+'">수정</button><button class="btn ghost sm" style="flex:1" data-act="xrepl" data-id="'+esc(e.id)+'">교체 처리</button></div>';
@@ -623,8 +629,11 @@ function exRepair(tok){var t=exKey(tok);function fx(L,D){L=L.replace(/0/g,'O').r
  return(t.length>=7&&t.length<=9)?(fx(t.slice(0,t.length-5),t.slice(-5))||fx(t.slice(5),t.slice(0,5))):''}
 function exParse(txt){var t=String(txt||''),o={pass:'',made:'',cap:'',kind:''},c=(t.match(/[A-Za-z0-9]{2,4}\s*[-–]?\s*[A-Za-z0-9]{5}(?![A-Za-z0-9])/g)||[]).concat(t.match(/(?:^|[^A-Za-z0-9])[0-9]{5}\s*[-–]?\s*[A-Za-z]{2,4}(?![A-Za-z0-9])/g)||[]),i,any='',best='';
  for(i=0;i<c.length;i++){var r=exRepair(c[i]);if(!r)continue;if(!any)any=r;if(EXIDX[exKey(r)]){best=r;break}}o.pass=best||any;
- var m=t.match(/(?:제조\s*(?:년월|연월|일자?)|검사\s*(?:년월|일자?)|MFG|DATE)[^0-9]{0,8}((?:19|20)\d\d)\s*[.\-\/년]?\s*(\d{1,2})?/i)||t.match(/((?:19|20)[0-2]\d)\s*[.\-\/년]\s*(\d{1,2})\s*월?/);
- if(m)o.made=m[1]+'-'+('0'+(m[2]||'1')).slice(-2)+'-01';
+ var DT='[^0-9]{0,8}((?:19|20)\\d\\d)\\s*[.\\-\\/년]?\\s*(\\d{1,2})?\\s*[.\\-\\/월]?\\s*(\\d{1,2})?',m;
+ function D(re){var q=t.match(new RegExp(re+DT,'i'));return q?q[1]+'-'+('0'+(q[2]||'1')).slice(-2)+'-'+('0'+(q[3]||'1')).slice(-2):''}
+ o.made=D('검사\\s*(?:일자|일|년월|연월)');if(o.made)o.madeSrc='검사';
+ if(!o.made){o.made=D('(?:제조\\s*(?:일자|일|년월|연월)|MFG)');if(o.made)o.madeSrc='제조'}
+ if(!o.made){m=t.match(/((?:19|20)[0-2]\d)\s*[.\-\/년]\s*(\d{1,2})(?:\s*[.\-\/월]\s*(\d{1,2}))?/);if(m){o.made=m[1]+'-'+('0'+m[2]).slice(-2)+'-'+('0'+(m[3]||'1')).slice(-2);o.madeSrc='기타'}}
  m=t.match(/(\d+(?:[.,]\d+)?)\s*(?:kg|㎏|KG|Kg)/);if(m)o.cap=m[1].replace(',','.')+'kg';
  if(/CO\s*2|이산화탄소/i.test(t))o.kind='이산화탄소';else if(/할로|할론/.test(t))o.kind='할로겐화합물';else if(/강화액/.test(t))o.kind='강화액';else if(/ABC|분말/.test(t))o.kind='분말';
  return o}
@@ -636,17 +645,20 @@ function exPrep(file){return new Promise(function(res,rej){var u=URL.createObjec
 function exSetMsg(m){var d=UI.draft;if(d)d.ocr=m;var el=$('#xocr');if(el)el.textContent=m}
 function exOcr(file){var d=UI.draft;if(!d||d.k!=='ext')return;d.busy=true;exSetMsg('읽는 중입니다. 처음에는 읽기 모듈을 내려받느라 1분 정도 걸릴 수 있습니다.');render();
  return exDbLoad(),exLoadTess().then(function(){return exPrep(file)}).then(function(cv){return window.Tesseract.recognize(cv,d.kor?'kor+eng':'eng',{logger:function(m){if(m&&m.status==='recognizing text')exSetMsg('글자 읽는 중 '+Math.round((m.progress||0)*100)+'%')}})}).then(function(r){
-  var txt=(r&&r.data&&r.data.text)||'',p=exParse(txt),miss=[];d.busy=false;d.raw=txt.slice(0,400);
-  if(p.pass)d.pass=p.pass;else miss.push('합격표시번호');if(p.made)d.made=p.made;else miss.push('제조·검사일');if(p.cap&&!d.cap)d.cap=p.cap;if(p.kind&&!d.edit)d.kind=p.kind;
+  var txt=(r&&r.data&&r.data.text)||'',p=exParse(txt),miss=[],ms;ms=p.madeSrc;d.busy=false;d.raw=txt.slice(0,400);
+  if(!d.edit){d.pass='';d.made=''}if(p.pass)d.pass=p.pass;else miss.push('합격표시번호');if(p.made)d.made=p.made;else miss.push('검사일자');if(p.cap&&!d.cap)d.cap=p.cap;if(p.kind&&!d.edit)d.kind=p.kind;
   var pr=ST.exts.find(function(x){return x.pass===d.pass&&x.id!==d.edit});if(pr)['maker','typeNo','agent','cap','unit'].forEach(function(f){if(!d[f])d[f]=pr[f]});
-  d.ocr='읽은 값입니다. 틀린 곳은 고친 뒤 등록하세요.'+(miss.length?' 읽지 못한 항목: '+miss.join(', ')+'.':'');render()
+  d.ocr='읽은 값입니다. 틀린 곳은 고친 뒤 등록하세요.'+(ms&&ms!=='검사'?' 검사일자를 찾지 못해 '+(ms==='제조'?'제조년월을':'라벨의 날짜를')+' 넣었습니다. 기준은 검사일자이니 확인하세요.':'')+(miss.length?' 읽지 못한 항목: '+miss.join(', ')+'.':'');render()
  }).catch(function(e){d.busy=false;d.ocr=(e&&e.message)||'읽지 못했습니다. 직접 입력하세요.';render()})}
 function exDbCard(d){if(!d.pass)return'<div class="small mute">합격표시번호를 입력하면 정비 이력 DB에서 찾아 줍니다.</div>';exDbLoad();if(!EXDB)return'<div class="small mute">정비 이력 DB를 불러오는 중입니다…</div>';
  var k=exDbLook(d.pass);if(k)return'<div class="card"><div class="row">'+pill('정비 DB 일치','p-g')+'<span class="sp"></span><span class="small mute">이력 '+k.n+'건</span></div><div class="small">정비업체 <b>'+esc(k.svc)+'</b> · 최근 정비 '+esc(k.last)+' · '+k.kg+'kg</div>'+(d.cap?'':'<button class="btn ghost sm" data-act="xdbcap" data-v="'+k.kg+'kg">용량 '+k.kg+'kg 적용</button>')+'</div>';
  var nr=exNear(d.pass);return'<div class="small mute">정비 이력 DB에 없는 번호입니다.'+(nr.length?' 비슷한 번호: '+nr.map(esc).join(', ')+' (읽기 오류인지 확인)':'')+'</div>'}
 var EXCK=[['안전핀·봉인','안전핀이 꽂혀 있고 봉인(실)이 끊어지지 않았는지 봅니다.'],['압력계','지침이 녹색(정상) 범위인지 봅니다. 노랑·빨강이면 불량입니다.'],['호스·노즐','균열·경화·막힘이 없는지 봅니다.'],['본체','녹·찌그러짐·누설 흔적, 제조년월·합격표시 라벨이 읽히는지 봅니다.'],['설치 상태','바닥에서 1.5m 이하, 가려지지 않았는지, 표지, 보행거리 20m 이내를 봅니다.']];
+function exSchedCard(e){var c=exSched(e),s=exSt(e),L=e.life||10;
+ var msg=!e.made?'검사일자가 없어 교체일을 계산할 수 없습니다.':(c.grace?'검사일자 '+e.made+' + '+L+'년 = '+c.base+' 에 도달했고, 성능 평가를 받아 '+GRACE_Y+'년 유예되어 '+c.fin+'까지 쓸 수 있습니다. 유예는 1회뿐이라 이 날짜에는 반드시 교체합니다.':'검사일자 '+e.made+' + '+L+'년 = '+c.base+' 에 교체합니다. 이 날짜에 도달했을 때 연구원 성능 평가를 받으면 1회에 한해 '+GRACE_Y+'년 유예됩니다.');
+ return'<div class="card stack"><div class="row"><b>검사·교체 일정</b><span class="sp"></span>'+pill(s.t,s.c)+'</div><div class="small">'+esc(msg)+'</div>'+(c.left!==null?'<div class="small mute">최종 교체 예정일 '+esc(c.fin)+' · '+(c.left>=0?'D-'+c.left:(-c.left)+'일 경과')+'</div>':'')+'<div class="small mute">유예 기준은 업체 안내(2년)이며 공식 기준 확인이 필요합니다.</div></div>'}
 function exHow(e){var s=exSt(e),a=e.made?(new Date(TODAY+'T00:00:00').getFullYear()-parseInt(e.made.slice(0,4),10)):null,L=e.life||10,n=[],k=exDbLook(e.pass);
- if(a!==null&&!isNaN(a)){if(a>=L)n.push('제조 후 '+a+'년으로 내용연수('+L+'년)에 도달했습니다. 교체 또는 성능 확인 대상입니다.');else if(a>=L-2)n.push('제조 후 '+a+'년으로 내용연수('+L+'년)가 가깝습니다. 교체 계획을 세우세요.');}else n.push('제조·검사일이 없어 내용연수를 판단할 수 없습니다.');
+ if(a!==null&&!isNaN(a)){if(e.evalAt)n.push('성능 평가로 '+GRACE_Y+'년 유예 중입니다. 유예는 1회뿐입니다.');else if(a>=L)n.push('검사일자 기준 '+a+'년으로 내용연수('+L+'년)에 도달했습니다. 교체하거나, 연구원 성능 평가를 받으면 1회 '+GRACE_Y+'년 유예됩니다.');else if(a>=L-2)n.push('검사일자 기준 '+a+'년으로 내용연수('+L+'년)가 가깝습니다. 교체 또는 성능 평가를 준비하세요.');}else n.push('검사일자가 없어 내용연수를 판단할 수 없습니다.');
  if(k)n.push('정비 이력 DB: '+k.svc+' · 최근 정비 '+k.last+' · '+k.n+'건. 이후 정비 기록이 없으면 정비업체에 확인하세요.');
  if(e.maker)n.push('제조업체 '+e.maker+(e.svc?'':'')+' — 라벨의 제조년월·합격표시 위치는 제조사마다 다르니 본체 뒷면까지 확인하세요.');
  return'<div class="card stack"><b>점검 방법</b>'+EXCK.map(function(c){return'<div class="small"><b>'+c[0]+'</b> · '+esc(c[1])+'</div>'}).join('')+n.map(function(t){return'<div class="small" style="color:var(--amber)">'+esc(t)+'</div>'}).join('')+'<div class="small mute">점검 항목과 내용연수는 일반 기준이며 현행 법령과 전문가 확인이 필요합니다.</div></div>'}
@@ -777,8 +789,8 @@ function A(act,el,e){var v=el.dataset.v,c=cur(),p=c.p,j,b,r,i;
   if(pr){['maker','typeNo','kind','agent','cap','unit','made','life'].forEach(function(f2){if(!d0[f2]&&d0[f2]!==0||f2==='kind'&&!d0.edit&&d0.kind==='분말')d0[f2]=pr[f2]});d0.msg='이전에 등록한 번호입니다. 제조사·형식승인번호·검사일을 채웠습니다.';toast(d0.msg)}render();return}
  case'xsave':{var d1=UI.draft;if(!d1)return;if(!d1.pass)return toast('합격표시번호를 입력하세요.');if(!d1.made)return toast('검사·제조일자를 입력하세요.');if(!(+d1.life>=1))return toast('내용연수를 확인하세요.');
   var dup=ST.exts.find(function(x){return x.bld===d1.bld&&x.pass===d1.pass&&x.state==='사용중'&&x.id!==d1.edit});if(dup)return toast('같은 건물에 같은 합격표시번호가 이미 등록되어 있습니다.');
-  var repl=d1.repl||addY(d1.made,d1.life),vals={bld:d1.bld,fk:d1.fk,loc:d1.loc.trim(),pass:d1.pass,maker:d1.maker.trim(),typeNo:d1.typeNo.trim(),kind:d1.kind,agent:d1.agent.trim(),cap:d1.cap.trim(),unit:d1.unit===''?'':+d1.unit,made:d1.made,life:+d1.life,repl:repl},sv=exDbLook(d1.pass);if(sv){vals.svc=sv.svc;vals.svcLast=sv.last}
-  if(d1.edit){var e0=ST.exts.find(function(x){return x.id===d1.edit});Object.assign(e0,vals);exLog(e0,'수정',d1.note||'내용 수정')}
+  var bs=addY(d1.made,d1.life),ex2=addY(d1.made,(+d1.life||10)+GRACE_Y),repl=(!d1.repl||d1.repl===bs||d1.repl===ex2)?(d1.evalAt?ex2:bs):d1.repl,vals={bld:d1.bld,fk:d1.fk,loc:d1.loc.trim(),pass:d1.pass,maker:d1.maker.trim(),typeNo:d1.typeNo.trim(),kind:d1.kind,agent:d1.agent.trim(),cap:d1.cap.trim(),unit:d1.unit===''?'':+d1.unit,made:d1.made,life:+d1.life,evalAt:d1.evalAt||'',repl:repl},sv=exDbLook(d1.pass);if(sv){vals.svc=sv.svc;vals.svcLast=sv.last}
+  if(d1.edit){var e0=ST.exts.find(function(x){return x.id===d1.edit});var gNew=!e0.evalAt&&d1.evalAt;Object.assign(e0,vals);exLog(e0,gNew?'유예':'수정',gNew?'성능 평가 '+d1.evalAt+' · 교체 예정일 '+repl+'로 '+GRACE_Y+'년 유예':(d1.note||'내용 수정'))}
   else{var ne=Object.assign({id:'e-'+rnd()+rnd(),state:'사용중',at:new Date().toISOString(),by:ST.uid||''},vals);ST.exts.push(ne);exLog(ne,'등록',d1.rep?'교체 등록 · 이전 '+(d1.repPass||''):[d1.note||'',sv?'정비 DB '+sv.svc+' 최근 '+sv.last:''].filter(Boolean).join(' · '))}
   UI.draft=null;save();stack.pop();render();return toast(d1.edit?'수정했습니다.':'소화기를 등록했습니다.')}
  case'xnote':UI.xnote=el.value;return;
