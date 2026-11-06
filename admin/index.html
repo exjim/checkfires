@@ -192,7 +192,7 @@ const ID_RE=/^[a-z0-9._-]{3,20}$/;
 
 /* ================= 데이터 계층 =================
    Firebase(Auth+Firestore)가 연결되면 서버에 저장하고, 연결이 없으면(로컬 실행 등) 이 기기 안에만 저장합니다. */
-const A={user:null,mode:'',init:null,blds:[],jobs:[],reports:[],users:[],un:[],err:'',fbErr:''};
+const A={user:null,mode:'',init:null,blds:[],jobs:[],reports:[],users:[],exts:[],mbs:[],exlog:[],un:[],err:'',fbErr:''};
 let D=null;
 async function sha(s){try{const b=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(s));return [...new Uint8Array(b)].map(x=>x.toString(16).padStart(2,'0')).join('')}catch(_){let h=5381;for(const c of s)h=((h<<5)+h+c.charCodeAt(0))|0;return 'x'+h}}
 function emsg(e){
@@ -214,7 +214,7 @@ const Local=(()=>{
  const load=()=>{if(mem)return mem;try{mem=JSON.parse(localStorage.getItem('fa-db')||'{}')}catch(_){mem={}}if(!mem||typeof mem!=='object')mem={};['users','buildings','jobs','reports','meta'].forEach(c=>mem[c]=mem[c]||{});return mem};
  const save=()=>{try{localStorage.setItem('fa-db',JSON.stringify(mem))}catch(e){throw new Error('이 기기의 저장 공간이 부족합니다. 사진 수를 줄이거나 Firebase 서버 연결을 사용하세요.')}};
  const pub=u=>{const o=Object.assign({},u);delete o.hash;return o};
- const rows=(c,w)=>Object.values(load()[c]).filter(d=>matchW(d,w)).map(d=>c==='users'?pub(d):d);
+ const rows=(c,w)=>Object.values(load()[c]||{}).filter(d=>matchW(d,w)).map(d=>c==='users'?pub(d):d);
  const notify=c=>subs.filter(s=>s.c===c).forEach(s=>s.run());
  addEventListener('storage',e=>{if(e.key==='fa-db'){mem=null;['users','buildings','jobs','reports'].forEach(notify)}});
  const api={
@@ -433,7 +433,7 @@ function startWatch(){
  const W=(c,w,key,cmp)=>A.un.push(D.watch(c,w,(rows,err)=>{if(err){A.err=emsg(err);return softRender()}A.err='';A[key]=rows.slice().sort(cmp);softRender()}));
  const byTs=(a,b)=>(b.ts||b.createdAt||0)-(a.ts||a.createdAt||0);
  const byName=(a,b)=>String(a.name||a.id).localeCompare(String(b.name||b.id),'ko');
- if(u.role==='admin'){W('buildings',null,'blds',byName);W('jobs',null,'jobs',byTs);W('reports',null,'reports',byTs);W('users',null,'users',byName)}
+ if(u.role==='admin'){W('buildings',null,'blds',byName);W('jobs',null,'jobs',byTs);W('reports',null,'reports',byTs);W('users',null,'users',byName);W('mext',null,'exts',byName);W('mbuildings',null,'mbs',byName);W('mextlog',null,'exlog',(a,b)=>String(b.at||'').localeCompare(String(a.at||'')))}
  else if(u.role==='inspector'){W('jobs',[['inspUid','==',u.uid]],'jobs',byTs);W('reports',[['inspUid','==',u.uid]],'reports',byTs)}
  else{W('buildings',[['ownerUid','==',u.uid]],'blds',byName);W('reports',[['ownerUid','==',u.uid],['status','==','승인']],'reports',byTs)}
 }
@@ -485,7 +485,7 @@ function openJob(id){
 /* ================= 로그인 · 계정 ================= */
 async function enter(p){
  A.user=p;S.role=RKEY[p.role];S.step=0;S.tab='mon';S.job=null;S.bf=null;S.msg='';S.pwOpen=false;
- A.blds=[];A.jobs=[];A.reports=[];A.users=[];startWatch();render();
+ A.blds=[];A.jobs=[];A.reports=[];A.users=[];A.exts=[];A.mbs=[];A.exlog=[];startWatch();render();
 }
 async function doLogout(){stopWatch();stopGeo();try{await D.logout()}catch(_){}A.user=null;S.job=null;S.login={tab:'user',msg:'',busy:false};render()}
 const hostIsFirebase=()=>/\.(web\.app|firebaseapp\.com)$/.test(location.hostname);
@@ -538,8 +538,8 @@ function render(){
   else{const sm=summarize(),rd=readiness(sm);html=S.step===1?vNotice():S.step===2?vInspect(sm,rd):vReport(sm,rd)}
  }else if(role==='admin'){
   const open=A.reports.filter(r=>r.status==='접수'||r.status==='확인 중').length;
-  steps=[['mon','모니터링'],['job','작업 분배'],['bld','건물'],['usr','사용자'],['rep','제출 리포트'+(open?' ('+open+')':'')],['b3d','3D 열람'],['rule','기준·규칙']].map(a=>'<button data-tab="'+a[0]+'" aria-current="'+(S.tab==a[0]?'step':'false')+'">'+a[1]+'</button>').join('');
-  html=({mon:aMon,job:aJob,bld:aBld,usr:aUsr,rep:aRep,b3d:aB3d,rule:aRule}[S.tab]||aMon)();
+  steps=[['mon','모니터링'],['job','작업 분배'],['bld','건물'],['usr','사용자'],['rep','제출 리포트'+(open?' ('+open+')':'')],['ext','소화기 대장'],['b3d','3D 열람'],['rule','기준·규칙']].map(a=>'<button data-tab="'+a[0]+'" aria-current="'+(S.tab==a[0]?'step':'false')+'">'+a[1]+'</button>').join('');
+  html=({mon:aMon,job:aJob,bld:aBld,usr:aUsr,rep:aRep,ext:aExt,b3d:aB3d,rule:aRule}[S.tab]||aMon)();
  }else{
   steps='<button aria-current="step">점검 결과 열람</button>';html=vOwner();
  }
@@ -674,6 +674,30 @@ document.addEventListener('pointerup',()=>{if(!sg)return;S.sig=sg.toDataURL('ima
 const floorChips=(states,floors)=>(floors||Object.keys(states||{})).map(f=>'<span class="heat '+heatCls[(states||{})[f]||'todo']+'" title="'+esc(f)+'">'+esc(f)+'</span>').join(' ');
 const inspectors=()=>A.users.filter(u=>u.role==='inspector'&&u.active);
 const owners=()=>A.users.filter(u=>u.role==='owner'&&u.active);
+
+/* 소화기 대장: 폰 앱(mext·mbuildings·mextlog)에 등록된 소화기를 건물별로 모아 본다. 읽기 전용. */
+function exStat(e){
+ if(e.state!=='사용중')return{t:e.state||'-',c:'no',k:-1};
+ if(!e.repl)return{t:'교체 기한 미입력',c:'warn',k:1};
+ const dd=Math.round((new Date(e.repl+'T00:00:00')-new Date(new Date().toISOString().slice(0,10)+'T00:00:00'))/864e5);
+ return dd<0?{t:'교체 필요 · '+(-dd)+'일 경과',c:'bad',k:3}:dd<=365?{t:'교체 임박 · D-'+dd,c:'warn',k:2}:{t:'정상 · D-'+dd,c:'ok',k:0};
+}
+function aExt(){
+ const live=A.exts.filter(e=>e.state==='사용중'),st=live.map(exStat),need=st.filter(x=>x.k===3).length,soon=st.filter(x=>x.k===2).length,noDate=st.filter(x=>x.k===1).length;
+ const nm=id=>(A.mbs.find(b=>b.id===id)||{}).name||id||'-';
+ const ids=[...new Set(A.exts.map(e=>e.bld))];
+ let h='<div><div class="kick">ADMIN</div><h2>소화기 대장</h2><p class="lead">점검자가 폰 앱에서 등록한 소화기를 건물별로 보여줍니다. 등록·수정은 폰 앱에서 합니다. 제조·검사일에 내용연수를 더한 교체 예정일 기준입니다.</p></div>'+flash();
+ h+='<div class="grid g4"><div class="kpi"><b>'+live.length+'</b><span>사용 중 소화기</span></div><div class="kpi"><b style="color:var(--red)">'+need+'</b><span>교체 필요</span></div><div class="kpi"><b style="color:var(--amber)">'+soon+'</b><span>교체 임박(1년 이내)</span></div><div class="kpi"><b>'+ids.length+'</b><span>소화기가 등록된 건물 (기한 미입력 '+noDate+')</span></div></div>';
+ if(!A.exts.length)return h+'<div class="notice">등록된 소화기가 없습니다. 폰 앱의 건물 → 설비 관리 → 소화기 대장에서 등록하면 여기에 나타납니다.'+(A.mode==='local'?' (로컬 모드에서는 폰 앱 데이터를 볼 수 없습니다.)':'')+'</div>';
+ ids.sort((a,b)=>nm(a).localeCompare(nm(b),'ko')).forEach(id=>{
+  const l=A.exts.filter(e=>e.bld===id).sort((a,b)=>exStat(b).k-exStat(a).k||String(a.fk).localeCompare(String(b.fk))),lv=l.filter(e=>e.state==='사용중').length;
+  h+='<div class="card"><div class="row"><h3 style="margin:0">'+esc(nm(id))+'</h3><span class="sp"></span><span class="pill p-no">사용 중 '+lv+'대</span></div><div class="tw"><table><tr><th>층·위치</th><th>합격표시번호</th><th>종류·용량</th><th>제조업체</th><th>제조·검사</th><th>교체 예정</th><th>상태</th></tr>'+
+   l.map(e=>{const x=exStat(e);return'<tr><td>'+esc(e.fk||'')+' · '+esc(e.loc||'-')+'</td><td class="mono">'+esc(e.pass||'')+'</td><td>'+esc([e.kind,e.cap].filter(Boolean).join(' '))+'</td><td>'+esc(e.maker||'-')+(e.svc?'<div class="small" style="color:var(--mute)">정비 '+esc(e.svc)+'</div>':'')+'</td><td>'+esc(e.made||'-')+'</td><td>'+esc(e.repl||'-')+'</td><td><span class="pill p-'+x.c+'">'+esc(x.t)+'</span></td></tr>'}).join('')+'</table></div></div>';
+ });
+ const lg=A.exlog.slice(0,10);
+ if(lg.length)h+='<h3>최근 이력</h3><div class="tw"><table><tr><th>날짜</th><th>구분</th><th>건물</th><th>합격표시번호</th><th>기록자</th><th>내용</th></tr>'+lg.map(l=>'<tr><td>'+esc(l.d||'')+'</td><td>'+esc(l.ev||'')+'</td><td>'+esc(nm(l.bld))+'</td><td class="mono">'+esc(l.pass||'')+'</td><td>'+esc(l.byName||'')+'</td><td>'+esc(l.note||'')+'</td></tr>').join('')+'</table></div>';
+ return h;
+}
 function aMon(){
  const jobs=A.jobs,openJ=jobs.filter(j=>['배정','수락','진행 중','보완 요청'].includes(j.status)),waiting=A.reports.filter(r=>r.status==='접수'||r.status==='확인 중').length;
  const unfixed=A.reports.filter(r=>r.status==='승인').reduce((a,r)=>a+r.defects.filter((x,i)=>!(r.fixes&&r.fixes[i])).length,0);
