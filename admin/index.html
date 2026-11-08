@@ -14,7 +14,7 @@
 <title>소방점검 통합 웹앱</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700;900&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;500;700&family=Noto+Sans+KR:wght@400;700;900&family=IBM+Plex+Mono:wght@400;500;700&display=swap">
 <style>
 /* Layout: 상단 역할 전환 → [사용자] ①고지(법정 비치 기준) ②층별 점검 ③리포트 제출 / [관리자] 모니터링 · 리포트 · 기준 */
 :root{--bg:#f6f7f9;--surface:#fff;--ink:#23262b;--mute:#6a7078;--line:#dfe3e8;--blue:#286ef0;--blue-soft:#e8f0fe;--red:#d93a3a;--red-soft:#fdecec;--amber:#b7791f;--amber-soft:#fdf3dc;--green:#1a8a5a;--green-soft:#e2f5ec;--wire:#e9ecf0;--grey:#b9c0c9;--slab:rgba(255,255,255,.72);--slab-edge:#9aa4b0;--stage:#e4e8ee;
@@ -163,18 +163,79 @@ input:focus-visible,select:focus-visible,textarea:focus-visible,button:focus-vis
 .banner{padding:8px 12px;font-size:12.5px;border-radius:8px;background:var(--amber-soft);color:var(--amber);margin-top:6px}
 .tk .row{gap:6px}
 code{font-family:var(--mono);font-size:12.5px}
+/* ===== 안전 표지 디자인 (unslop 재디자인, 폰 앱과 같은 토큰) ===== */
+:root{--bg:#e9ecef;--ink:#12161b;--mute:#58616b;--line:#c9cfd6;--blue:#1d5fd6;--blue-soft:#e3ecfb;--red:#c8281e;--red-soft:#fbe6e3;--amber:#8a5a00;--amber-soft:#fff1c2;--green:#13794d;--green-soft:#dff3e8;--wire:#dde1e6;--signal:#ffc20e;--bar:#12161b;--bar-ink:#f4f5f6;--r:6px;--sans:'IBM Plex Sans KR','Noto Sans KR',system-ui,sans-serif}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0e1114;--surface:#171b20;--ink:#eceff2;--mute:#98a1ab;--line:#2c333b;--blue:#7aa7ff;--blue-soft:#18284a;--red:#ff7066;--red-soft:#3b1f1d;--amber:#ffcf5a;--amber-soft:#3a2f12;--green:#4fd08f;--green-soft:#14301f;--wire:#232930;--bar:#05070a}}
+:root[data-theme="dark"]{--bg:#0e1114;--surface:#171b20;--ink:#eceff2;--mute:#98a1ab;--line:#2c333b;--blue:#7aa7ff;--blue-soft:#18284a;--red:#ff7066;--red-soft:#3b1f1d;--amber:#ffcf5a;--amber-soft:#3a2f12;--green:#4fd08f;--green-soft:#14301f;--wire:#232930;--bar:#05070a}
+body{padding-inline:0;font-variant-numeric:tabular-nums;letter-spacing:-.005em}
+.wrap{max-width:1152px;padding-inline:max(16px,env(safe-area-inset-left,0px))}
+button,input,select,textarea{font-family:var(--sans)}
+/* 상단: 어두운 바 + 메뉴 + 경고 사선 */
+header.top{display:block;background:var(--bar);color:var(--bar-ink);padding-block:max(18px,env(safe-area-inset-top,0px)) 18px}
+header.top .topin{max-width:1152px;margin-inline:auto;padding-inline:max(16px,env(safe-area-inset-left,0px));display:flex;flex-wrap:wrap;gap:10px 20px;align-items:center;justify-content:space-between}
+header.top h1{font-weight:700;color:var(--bar-ink)}
+header.top .kick{color:#aab2bb}
+header.top .small,header.top .mute{color:#aab2bb}
+header.top .btn.ghost{color:var(--bar-ink);border-color:#4a525c}
+.applogo{border-radius:var(--r);background:var(--signal)}
+.applogo svg{fill:#12161b}
+.applogo:hover{box-shadow:0 3px 0 rgba(255,194,14,.5)}
+.toapp{border-radius:var(--r);background:transparent;color:var(--bar-ink);border:1.5px solid #4a525c;font-weight:700}
+.toapp:hover{background:#1f252c}
+.steps{background-color:var(--bar);background-image:repeating-linear-gradient(-45deg,var(--signal) 0 10px,var(--bar) 10px 20px);background-size:100% 6px;background-repeat:no-repeat;background-position:bottom;border-bottom:0;margin-inline:0;padding:0 max(16px,calc((100vw - 1152px)/2 + 16px)) 6px;gap:2px}
+.steps button{color:#aab2bb;border-radius:0;font-weight:700;min-height:48px;padding-inline:16px;position:relative}
+.steps button:hover:not(:disabled){color:#fff}
+.steps button[aria-current="step"]{background:transparent;color:var(--signal);box-shadow:inset 0 -4px 0 var(--signal)}
+.side{top:80px}
+main{padding-top:22px}
+/* 본문 */
+.kick{font-weight:500}
+h2{font-weight:700;font-size:23px}
+h3{font-weight:700}
+.card{border-radius:var(--r)}
+.notice{border-left-width:6px;border-radius:0 var(--r) var(--r) 0}
+.tw{border-radius:var(--r)}
+th{background:var(--bar);color:var(--bar-ink)}
+td.c,th.c{text-align:center}
+input[type=number],select,textarea{background:var(--surface);border:1.5px solid var(--line);border-radius:var(--r);min-height:42px}
+input:focus-visible,select:focus-visible,textarea:focus-visible,button:focus-visible{outline:3px solid var(--blue);outline-offset:2px}
+.pill{border-radius:3px;border:1px solid currentColor;letter-spacing:.03em;padding:2px 7px}
+.btn{border-radius:var(--r);border:2px solid var(--ink);min-height:44px}
+.btn.blue{background:var(--signal);border-color:var(--bar);color:#12161b;box-shadow:0 3px 0 var(--bar)}
+.btn.blue:active:not(:disabled){transform:translateY(2px);box-shadow:0 1px 0 var(--bar)}
+.btn.bad{border-color:var(--red)}
+.btn.ghost{border-color:var(--line)}
+.btn.sm{min-height:36px}
+.seg{border:2px solid var(--ink);border-radius:var(--r)}
+.seg button[aria-pressed="true"]{box-shadow:inset 0 -4px 0 var(--signal)}
+.chip{border-radius:4px;border-width:1.5px}
+.chip[aria-checked="true"]{box-shadow:inset 0 -3px 0 var(--signal)}
+.item{border-radius:var(--r)}
+.item>header{background:var(--wire)}
+.ck{border-radius:var(--r)}
+.opts button{border-radius:4px;border-width:1.5px}
+.kpi{border-radius:var(--r);border-top:4px solid var(--ink);padding:12px 14px 14px}
+.kpi b{font:700 34px/1.1 var(--mono)}
+.kpi span{font-weight:700}
+.grid.g4>.kpi:nth-child(2){border-top-color:var(--amber)}.grid.g4>.kpi:nth-child(3){border-top-color:var(--red)}.grid.g4>.kpi:nth-child(4){border-top-color:var(--green)}
+.bar{height:10px;border-radius:2px;border:1px solid var(--line)}
+.bar i{background:repeating-linear-gradient(-45deg,var(--signal) 0 6px,#e5a900 6px 12px)}
+.heat{border-radius:3px;border:1px solid currentColor}
+.lrow,.df,.fl-list button{border-radius:var(--r)}
+.lrow[aria-pressed="true"],.fl-list button[aria-pressed="true"]{border-color:var(--ink);background:var(--amber-soft);box-shadow:inset 5px 0 0 var(--signal)}
+.stage{border-radius:var(--r)}
+.tag{border-radius:3px}
+
 </style>
 </head>
 <body>
-<div class="wrap">
-<header class="top">
+<header class="top"><div class="topin">
   <div style="display:flex;align-items:center;gap:12px"><a href="/" class="applogo" title="소방안전점검 앱으로 이동" aria-label="소방안전점검 앱으로 이동"><svg viewBox="0 0 24 24"><path class="fl" d="M12.5 2c.7 3.6 4.6 5.4 4.6 10.2A5.1 5.1 0 0 1 12 17.3a5.1 5.1 0 0 1-5.1-5.1c0-2 1-3.5 2.3-4.7.1 1.8.9 2.9 2 3.3-.5-3.5-.2-6.2 1.3-8.8z"/><path d="M12 19.3c2.9 0 5.2-1.1 6.6-2.7.6 3-1.9 5.4-6.6 5.4s-7.2-2.4-6.6-5.4c1.4 1.6 3.7 2.7 6.6 2.7z"/></svg></a><div><div class="kick">Faircode · 소방안전 점검 · 모니터링</div><h1>소방점검 통합 웹앱</h1></div></div>
-  <a href="/" class="toapp">📱 소방안전점검 앱으로 돌아가기</a>
+  <a href="/" class="toapp">← 소방안전점검 앱으로 돌아가기</a>
   <div class="ubar" id="userbar"></div>
-</header>
+</div></header>
 <nav class="steps" id="steps" aria-label="메뉴"></nav>
-<main id="view"></main>
-</div>
+<div class="wrap"><main id="view"></main></div>
 <div id="lbx"></div>
 <script>
 (function(){
